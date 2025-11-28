@@ -178,28 +178,28 @@ const POS = () => {
         ${items.map(item => `
           <div class="item">
             <span>${item.product.name} x${item.qty}</span>
-            <span>$${(item.product.price * item.qty).toFixed(2)}</span>
+            <span>R${(item.product.price * item.qty).toFixed(2)}</span>
           </div>
         `).join('')}
         <div class="line"></div>
         <div class="totals">
           <div class="item">
             <span>Subtotal:</span>
-            <span>$${totals.subtotal.toFixed(2)}</span>
+            <span>R${totals.subtotal.toFixed(2)}</span>
           </div>
           <div class="item">
             <span>Tax:</span>
-            <span>$${totals.taxAmount.toFixed(2)}</span>
+            <span>R${totals.taxAmount.toFixed(2)}</span>
           </div>
           ${discountAmount > 0 ? `
             <div class="item">
               <span>Discount:</span>
-              <span>-$${discountAmount.toFixed(2)}</span>
+              <span>-R${discountAmount.toFixed(2)}</span>
             </div>
           ` : ''}
           <div class="item">
             <span>Total:</span>
-            <span>$${totals.total.toFixed(2)}</span>
+            <span>R${totals.total.toFixed(2)}</span>
           </div>
         </div>
         <div class="center" style="margin-top: 20px;">
@@ -272,7 +272,7 @@ const POS = () => {
                   >
                     <span className="font-semibold text-sm">{product.name}</span>
                     <span className="text-xs text-muted-foreground">{product.sku}</span>
-                    <span className="text-lg font-bold text-primary mt-2">${product.price.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-primary mt-2">R{product.price.toFixed(2)}</span>
                     <Badge variant="secondary" className="mt-1">Stock: {product.stock_qty}</Badge>
                   </Button>
                 ))}
@@ -301,7 +301,7 @@ const POS = () => {
                       <div key={item.product.id} className="flex items-center gap-2 p-2 border rounded">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.product.name}</p>
-                          <p className="text-xs text-muted-foreground">${item.product.price.toFixed(2)} each</p>
+                          <p className="text-xs text-muted-foreground">R{item.product.price.toFixed(2)} each</p>
                         </div>
                         <div className="flex items-center gap-1">
                           <Button
@@ -323,7 +323,7 @@ const POS = () => {
                           </Button>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold">${(item.product.price * item.qty).toFixed(2)}</p>
+                          <p className="font-bold">R{(item.product.price * item.qty).toFixed(2)}</p>
                         </div>
                         <Button
                           size="icon"
@@ -342,11 +342,11 @@ const POS = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Subtotal:</span>
-                      <span>${totals.subtotal.toFixed(2)}</span>
+                      <span>R{totals.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Tax:</span>
-                      <span>${totals.taxAmount.toFixed(2)}</span>
+                      <span>R{totals.taxAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Discount:</span>
@@ -362,7 +362,7 @@ const POS = () => {
                     <Separator />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total:</span>
-                      <span className="text-primary">${totals.total.toFixed(2)}</span>
+                      <span className="text-primary">R{totals.total.toFixed(2)}</span>
                     </div>
                   </div>
 

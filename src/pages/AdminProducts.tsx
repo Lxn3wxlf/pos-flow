@@ -324,7 +324,7 @@ const AdminProducts = () => {
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{product.sku}</TableCell>
-                      <TableCell>${product.price.toFixed(2)}</TableCell>
+                      <TableCell>R{product.price.toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge variant={product.stock_qty > 10 ? "default" : product.stock_qty > 0 ? "secondary" : "destructive"}>
                           {product.stock_qty}
