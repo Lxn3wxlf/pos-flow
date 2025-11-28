@@ -79,19 +79,9 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Insert user role
-        const { error: roleError } = await supabase.from('user_roles').insert({
-          user_id: data.user.id,
-          role: role as any
-        });
-
-        if (roleError) {
-          console.error('Error inserting role:', roleError);
-        }
-
         toast.success('Account created successfully!');
         
-        // Auto sign in and redirect
+        // Auto sign in and redirect based on role
         if (role === 'admin') {
           navigate('/admin');
         } else if (role === 'waiter') {
