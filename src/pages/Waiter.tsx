@@ -41,6 +41,8 @@ const Waiter = () => {
   const [showNewOrderDialog, setShowNewOrderDialog] = useState(false);
   const [guestCount, setGuestCount] = useState(2);
   const [customerName, setCustomerName] = useState('');
+  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway' | 'collection'>('dine_in');
+  const [pickupTime, setPickupTime] = useState('');
 
   if (!user) return <Navigate to="/auth" />;
   const hasAccess = profile?.roles?.some(r => ['waiter', 'admin'].includes(r));
@@ -128,30 +130,41 @@ const Waiter = () => {
     if (!selectedTable) return;
 
     try {
+      const orderData: any = {
+        table_id: selectedTable.id,
+        waiter_id: user!.id,
+        order_type: orderType,
+        status: 'pending',
+        guest_count: orderType === 'dine_in' ? guestCount : null,
+        customer_name: customerName || null,
+        order_number: `ORD-${Date.now()}`
+      };
+
+      // Add pickup time for collection orders
+      if (orderType === 'collection' && pickupTime) {
+        orderData.pickup_time = pickupTime;
+      }
+
       const { data: order, error } = await supabase
         .from('orders')
-        .insert({
-          table_id: selectedTable.id,
-          waiter_id: user!.id,
-          order_type: 'dine_in',
-          status: 'pending',
-          guest_count: guestCount,
-          customer_name: customerName || null,
-          order_number: `ORD-${Date.now()}`
-        })
+        .insert(orderData)
         .select()
         .single();
 
       if (error) throw error;
 
-      // Update table status to occupied
-      await updateTableStatus(selectedTable.id, 'occupied');
+      // Update table status to occupied for dine-in only
+      if (orderType === 'dine_in') {
+        await updateTableStatus(selectedTable.id, 'occupied');
+      }
 
       toast.success('Order created successfully');
       setShowNewOrderDialog(false);
       setSelectedTable(null);
       setCustomerName('');
       setGuestCount(2);
+      setOrderType('dine_in');
+      setPickupTime('');
 
       // Navigate to order details to add items
       navigate(`/waiter/order/${order.id}`);
@@ -300,39 +313,98 @@ const Waiter = () => {
 
       {/* New Order Dialog */}
       <Dialog open={showNewOrderDialog} onOpenChange={setShowNewOrderDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>New Order - Table {selectedTable?.table_number}</DialogTitle>
-            <DialogDescription>Enter guest information</DialogDescription>
+            <DialogDescription>Select order type and enter details</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Guest Count *</label>
-              <input
-                type="number"
-                min="1"
-                max={selectedTable?.seats || 10}
-                value={guestCount}
-                onChange={(e) => setGuestCount(parseInt(e.target.value) || 1)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
-              />
+              <label className="text-sm font-medium">Order Type *</label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={orderType === 'dine_in' ? 'default' : 'outline'}
+                  onClick={() => setOrderType('dine_in')}
+                  className="w-full"
+                >
+                  Dine In
+                </Button>
+                <Button
+                  type="button"
+                  variant={orderType === 'takeaway' ? 'default' : 'outline'}
+                  onClick={() => setOrderType('takeaway')}
+                  className="w-full"
+                >
+                  Takeaway
+                </Button>
+                <Button
+                  type="button"
+                  variant={orderType === 'collection' ? 'default' : 'outline'}
+                  onClick={() => setOrderType('collection')}
+                  className="w-full"
+                >
+                  Collection
+                </Button>
+              </div>
             </div>
+
+            {orderType === 'dine_in' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Guest Count *</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={selectedTable?.seats || 10}
+                  value={guestCount}
+                  onChange={(e) => setGuestCount(parseInt(e.target.value) || 1)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
+                />
+              </div>
+            )}
+
+            {orderType === 'collection' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Pickup Time *</label>
+                <input
+                  type="datetime-local"
+                  value={pickupTime}
+                  onChange={(e) => setPickupTime(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
+                  required
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
-              <label className="text-sm font-medium">Customer Name (Optional)</label>
+              <label className="text-sm font-medium">Customer Name {orderType !== 'dine_in' ? '*' : '(Optional)'}</label>
               <input
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Enter customer name"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
+                required={orderType !== 'dine_in'}
               />
             </div>
             <div className="flex gap-2">
-              <Button onClick={createNewOrder} className="flex-1">
+              <Button 
+                onClick={createNewOrder} 
+                className="flex-1"
+                disabled={
+                  (orderType === 'collection' && !pickupTime) ||
+                  (orderType !== 'dine_in' && !customerName)
+                }
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Order
               </Button>
-              <Button variant="outline" onClick={() => setShowNewOrderDialog(false)}>
+              <Button variant="outline" onClick={() => {
+                setShowNewOrderDialog(false);
+                setOrderType('dine_in');
+                setPickupTime('');
+              }}>
                 Cancel
               </Button>
             </div>

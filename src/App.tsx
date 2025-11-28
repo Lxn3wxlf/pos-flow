@@ -14,6 +14,8 @@ import AdminReports from "./pages/AdminReports";
 import AdminModifiers from "./pages/AdminModifiers";
 import AdminCombos from "./pages/AdminCombos";
 import AdminProductModifiers from "./pages/AdminProductModifiers";
+import AdminPromotions from "./pages/AdminPromotions";
+import AdminCustomers from "./pages/AdminCustomers";
 import Waiter from "./pages/Waiter";
 import WaiterOrder from "./pages/WaiterOrder";
 import Kitchen from "./pages/Kitchen";
@@ -41,6 +43,8 @@ const App = () => (
           <Route path="/admin/modifiers" element={<AdminModifiers />} />
           <Route path="/admin/combos" element={<AdminCombos />} />
           <Route path="/admin/product-modifiers" element={<AdminProductModifiers />} />
+          <Route path="/admin/promotions" element={<AdminPromotions />} />
+          <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route path="/waiter" element={<Waiter />} />
             <Route path="/waiter/order/:orderId" element={<WaiterOrder />} />
             <Route path="/kitchen" element={<Kitchen />} />

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navigate, Link } from 'react-router-dom';
-import { LayoutDashboard, Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck } from 'lucide-react';
+import { LayoutDashboard, Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 
 const Admin = () => {
@@ -169,6 +169,48 @@ const Admin = () => {
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Track and manage delivery orders and assignments
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/promotions">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-orange-500/10 rounded-lg">
+                    <Percent className="h-6 w-6 text-orange-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Promotions</CardTitle>
+                    <CardDescription>Discounts & deals</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Create time-based discounts and promotional campaigns
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/customers">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-500/10 rounded-lg">
+                    <Users className="h-6 w-6 text-purple-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Customers</CardTitle>
+                    <CardDescription>Customer management</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Manage customer details, history, and loyalty points
                 </p>
               </CardContent>
             </Link>
