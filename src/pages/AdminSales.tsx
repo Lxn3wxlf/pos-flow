@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { History, ArrowLeft } from 'lucide-react';
-import { Navigate, Link } from 'react-router-dom';
+import { History } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import AppHeader from '@/components/AppHeader';
 
 interface Sale {
   id: string;
@@ -56,19 +56,12 @@ const AdminSales = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b bg-card p-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/admin">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div className="flex items-center gap-2">
-            <History className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">Sales History</h1>
-          </div>
+      <AppHeader>
+        <div className="flex items-center gap-2 justify-center">
+          <History className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-bold">Sales History</h1>
         </div>
-      </div>
+      </AppHeader>
 
       <div className="p-6">
         <Card>

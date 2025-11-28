@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Navigate, Link } from 'react-router-dom';
 import { LayoutDashboard, Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import AppHeader from '@/components/AppHeader';
 
 const Admin = () => {
   const { user, profile, signOut } = useAuth();
@@ -15,9 +16,8 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="flex items-center justify-between p-4">
+      <AppHeader>
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <LayoutDashboard className="h-6 w-6 text-primary" />
             <div>
@@ -44,7 +44,7 @@ const Admin = () => {
             </Button>
           </div>
         </div>
-      </div>
+      </AppHeader>
 
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

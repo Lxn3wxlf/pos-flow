@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { BarChart3, ArrowLeft, Download, TrendingUp, Package, DollarSign } from 'lucide-react';
-import { Navigate, Link } from 'react-router-dom';
+import { BarChart3, Download, TrendingUp, Package, DollarSign } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import AppHeader from '@/components/AppHeader';
 
 interface ReportData {
   totalSales: number;
@@ -113,25 +114,18 @@ const AdminReports = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b bg-card p-4">
+      <AppHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/admin">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Reports & Analytics</h1>
-            </div>
+          <div className="flex items-center gap-2 justify-center">
+            <BarChart3 className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-bold">Reports & Analytics</h1>
           </div>
           <Button onClick={exportToCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
         </div>
-      </div>
+      </AppHeader>
 
       <div className="p-6 space-y-6">
         {loading ? (

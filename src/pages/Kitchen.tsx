@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ChefHat, LogOut, Clock, CheckCircle } from 'lucide-react';
+import AppHeader from '@/components/AppHeader';
 
 interface OrderItem {
   id: string;
@@ -121,9 +122,8 @@ const Kitchen = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="flex items-center justify-between p-4">
+      <AppHeader>
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <ChefHat className="h-6 w-6 text-primary" />
             <div>
@@ -135,7 +135,7 @@ const Kitchen = () => {
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
-      </div>
+      </AppHeader>
 
       <div className="p-6">
         <Tabs value={selectedStation} onValueChange={setSelectedStation}>
