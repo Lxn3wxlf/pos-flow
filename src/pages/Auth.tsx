@@ -41,9 +41,11 @@ const Auth = () => {
         
         if (userRoles.includes('admin')) {
           navigate('/admin');
-        } else if (userRoles.includes('cashier')) {
-          navigate('/pos');
         } else if (userRoles.includes('waiter')) {
+          navigate('/waiter');
+        } else if (userRoles.includes('kitchen')) {
+          navigate('/kitchen');
+        } else if (userRoles.includes('cashier')) {
           navigate('/pos');
         } else {
           navigate('/');
@@ -92,6 +94,10 @@ const Auth = () => {
         // Auto sign in and redirect
         if (role === 'admin') {
           navigate('/admin');
+        } else if (role === 'waiter') {
+          navigate('/waiter');
+        } else if (role === 'kitchen') {
+          navigate('/kitchen');
         } else {
           navigate('/pos');
         }
