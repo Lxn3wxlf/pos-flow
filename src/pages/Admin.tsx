@@ -91,6 +91,27 @@ const Admin = () => {
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/product-modifiers">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Package className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Link Modifiers</CardTitle>
+                    <CardDescription>Product setup</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Link modifiers to specific products
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <Link to="/admin/sales">
               <CardHeader>
                 <div className="flex items-center gap-3">

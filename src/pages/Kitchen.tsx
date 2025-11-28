@@ -19,6 +19,14 @@ interface OrderItem {
   status: string;
   kitchen_station: string;
   created_at: string;
+  modifiers?: Array<{
+    modifier_name: string;
+    price_adjustment: number;
+  }>;
+  combo_selections?: Array<{
+    selected_product_name: string;
+    qty: number;
+  }>;
   orders?: {
     order_number: string;
     restaurant_tables?: {
@@ -69,7 +77,24 @@ const Kitchen = () => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setOrderItems(data || []);
+      
+      // Load modifiers and combo selections for each item
+      const itemsWithDetails = await Promise.all(
+        (data || []).map(async (item) => {
+          const [modifiersRes, comboRes] = await Promise.all([
+            supabase.from('order_item_modifiers').select('modifier_name, price_adjustment').eq('order_item_id', item.id),
+            supabase.from('order_item_combo_selections').select('selected_product_name, qty').eq('order_item_id', item.id),
+          ]);
+          
+          return {
+            ...item,
+            modifiers: modifiersRes.data || [],
+            combo_selections: comboRes.data || [],
+          };
+        })
+      );
+      
+      setOrderItems(itemsWithDetails);
     } catch (error) {
       console.error('Error loading order items:', error);
       toast.error('Failed to load orders');
@@ -195,6 +220,28 @@ const Kitchen = () => {
                       <div>
                         <p className="font-bold text-lg">{item.product_name}</p>
                         <p className="text-2xl font-bold text-primary">x{item.qty}</p>
+                        
+                        {item.modifiers && item.modifiers.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-xs font-semibold">Modifiers:</p>
+                            {item.modifiers.map((mod, i) => (
+                              <p key={i} className="text-xs text-muted-foreground">
+                                + {mod.modifier_name}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {item.combo_selections && item.combo_selections.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-xs font-semibold text-primary">Combo Items:</p>
+                            {item.combo_selections.map((sel, i) => (
+                              <p key={i} className="text-xs text-muted-foreground">
+                                • {sel.selected_product_name} ×{sel.qty}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {item.special_instructions && (
