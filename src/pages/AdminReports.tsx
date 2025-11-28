@@ -27,7 +27,7 @@ const AdminReports = () => {
   });
 
   if (!user) return <Navigate to="/auth" />;
-  if (profile?.role !== 'admin') return <Navigate to="/pos" />;
+  if (!profile?.roles?.includes('admin')) return <Navigate to="/pos" />;
 
   useEffect(() => {
     loadReportData();

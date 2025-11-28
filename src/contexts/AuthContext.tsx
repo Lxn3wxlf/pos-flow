@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 interface Profile {
   id: string;
   full_name: string;
-  role: 'admin' | 'cashier';
+  roles: string[];
 }
 
 interface AuthContextType {
@@ -34,16 +34,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Fetch profile after setting user
+          // Fetch profile and roles after setting user
           setTimeout(async () => {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+            const [profileResult, rolesResult] = await Promise.all([
+              supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+              supabase.from('user_roles').select('role').eq('user_id', session.user.id)
+            ]);
 
-            if (profileData) {
-              setProfile(profileData as Profile);
+            if (profileResult.data && rolesResult.data) {
+              setProfile({
+                ...profileResult.data,
+                roles: rolesResult.data.map((r: any) => r.role)
+              } as Profile);
             }
           }, 0);
         } else {
@@ -59,14 +61,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (session?.user) {
         setTimeout(async () => {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+          const [profileResult, rolesResult] = await Promise.all([
+            supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+            supabase.from('user_roles').select('role').eq('user_id', session.user.id)
+          ]);
 
-          if (profileData) {
-            setProfile(profileData as Profile);
+          if (profileResult.data && rolesResult.data) {
+            setProfile({
+              ...profileResult.data,
+              roles: rolesResult.data.map((r: any) => r.role)
+            } as Profile);
           }
           setLoading(false);
         }, 0);

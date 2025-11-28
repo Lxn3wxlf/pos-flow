@@ -15,7 +15,7 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<'admin' | 'cashier'>('cashier');
+  const [role, setRole] = useState('cashier');
   const navigate = useNavigate();
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -31,17 +31,22 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Fetch user profile to determine role
-        const { data: profile } = await supabase
-          .from('profiles')
+        // Fetch user roles to determine where to redirect
+        const { data: roles } = await supabase
+          .from('user_roles')
           .select('role')
-          .eq('id', data.user.id)
-          .single();
+          .eq('user_id', data.user.id);
 
-        if (profile?.role === 'admin') {
+        const userRoles = roles?.map(r => r.role) || [];
+        
+        if (userRoles.includes('admin')) {
           navigate('/admin');
-        } else {
+        } else if (userRoles.includes('cashier')) {
           navigate('/pos');
+        } else if (userRoles.includes('waiter')) {
+          navigate('/pos');
+        } else {
+          navigate('/');
         }
         toast.success('Signed in successfully');
       }
@@ -72,12 +77,24 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        toast.success('Account created successfully! Please sign in.');
-        // Switch to login tab
-        setTimeout(() => {
-          const loginTab = document.querySelector('[value="login"]') as HTMLElement;
-          loginTab?.click();
-        }, 1000);
+        // Insert user role
+        const { error: roleError } = await supabase.from('user_roles').insert({
+          user_id: data.user.id,
+          role: role as any
+        });
+
+        if (roleError) {
+          console.error('Error inserting role:', roleError);
+        }
+
+        toast.success('Account created successfully!');
+        
+        // Auto sign in and redirect
+        if (role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/pos');
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to create account');
@@ -173,12 +190,14 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
-                  <Select value={role} onValueChange={(value: 'admin' | 'cashier') => setRole(value)}>
+                  <Select value={role} onValueChange={setRole}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cashier">Cashier</SelectItem>
+                      <SelectItem value="waiter">Waiter</SelectItem>
+                      <SelectItem value="kitchen">Kitchen Staff</SelectItem>
                       <SelectItem value="admin">Administrator</SelectItem>
                     </SelectContent>
                   </Select>

@@ -33,9 +33,10 @@ const POS = () => {
     []
   );
 
-  // Redirect if not authenticated or not a cashier
+  // Redirect if not authenticated or doesn't have cashier/waiter/admin role
   if (!user) return <Navigate to="/auth" />;
-  if (profile?.role !== 'cashier' && profile?.role !== 'admin') return <Navigate to="/auth" />;
+  const hasAccess = profile?.roles?.some(r => ['cashier', 'waiter', 'admin'].includes(r));
+  if (!hasAccess) return <Navigate to="/auth" />;
 
   const filteredProducts = products?.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
