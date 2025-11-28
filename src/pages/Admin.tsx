@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navigate, Link } from 'react-router-dom';
-import { LayoutDashboard, Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 
 const Admin = () => {
@@ -106,6 +106,27 @@ const Admin = () => {
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Sales reports, profit analysis, and exports
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/delivery">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-500/10 rounded-lg">
+                    <Truck className="h-6 w-6 text-blue-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Delivery Orders</CardTitle>
+                    <CardDescription>Manage deliveries</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Track and manage delivery orders and assignments
                 </p>
               </CardContent>
             </Link>
