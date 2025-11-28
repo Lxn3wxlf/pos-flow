@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Package, Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
-import { Navigate, Link } from 'react-router-dom';
+import { Package, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import AppHeader from '@/components/AppHeader';
 
 interface Product {
   id: string;
@@ -156,18 +157,11 @@ const AdminProducts = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b bg-card p-4">
+      <AppHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/admin">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div className="flex items-center gap-2">
-              <Package className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Product Management</h1>
-            </div>
+          <div className="flex items-center gap-2 justify-center">
+            <Package className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-bold">Product Management</h1>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -203,41 +197,54 @@ const AdminProducts = () => {
                       required
                     />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="barcode">Barcode</Label>
-                  <Input
-                    id="barcode"
-                    value={formData.barcode}
-                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Price *</Label>
+                    <Label htmlFor="barcode">Barcode</Label>
+                    <Input
+                      id="barcode"
+                      value={formData.barcode}
+                      onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select
+                      value={formData.category_id}
+                      onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                    >
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price (R) *</Label>
                     <Input
                       id="price"
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cost">Cost</Label>
+                    <Label htmlFor="cost">Cost (R) *</Label>
                     <Input
                       id="cost"
                       type="number"
                       step="0.01"
                       min="0"
                       value={formData.cost}
-                      onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
+                      required
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="tax_rate">Tax Rate (%)</Label>
                     <Input
@@ -247,7 +254,7 @@ const AdminProducts = () => {
                       min="0"
                       max="100"
                       value={formData.tax_rate}
-                      onChange={(e) => setFormData({ ...formData, tax_rate: parseFloat(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, tax_rate: parseFloat(e.target.value) || 0 })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -257,22 +264,9 @@ const AdminProducts = () => {
                       type="number"
                       min="0"
                       value={formData.stock_qty}
-                      onChange={(e) => setFormData({ ...formData, stock_qty: parseInt(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, stock_qty: parseInt(e.target.value) || 0 })}
                     />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -296,7 +290,7 @@ const AdminProducts = () => {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      </AppHeader>
 
       <div className="p-6">
         <Card>

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Search, ShoppingCart, Wifi, WifiOff, LogOut, Trash2, Plus, Minus } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import AppHeader from '@/components/AppHeader';
 
 interface CartItem {
   product: LocalProduct;
@@ -223,9 +224,8 @@ const POS = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="flex items-center justify-between p-4">
+      <AppHeader>
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <ShoppingCart className="h-6 w-6 text-primary" />
             <div>
@@ -244,7 +244,7 @@ const POS = () => {
             </Button>
           </div>
         </div>
-      </div>
+      </AppHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
         {/* Products Section */}

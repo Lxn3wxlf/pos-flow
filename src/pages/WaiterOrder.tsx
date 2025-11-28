@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { Navigate, useParams, useNavigate, Link } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Minus, Trash2, Send, Search } from 'lucide-react';
+import { Plus, Minus, Trash2, Send, Search } from 'lucide-react';
+import AppHeader from '@/components/AppHeader';
 
 interface Product {
   id: string;
@@ -213,25 +214,14 @@ const WaiterOrder = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/waiter">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">
-                Order - Table {order?.restaurant_tables?.table_number}
-              </h1>
-              <p className="text-sm text-muted-foreground">{order?.order_number}</p>
-            </div>
-          </div>
+      <AppHeader>
+        <div className="flex items-center justify-center gap-2">
+          <h1 className="text-xl font-bold">
+            Order - Table {order?.restaurant_tables?.table_number}
+          </h1>
           <Badge variant="secondary">{order?.status}</Badge>
         </div>
-      </div>
+      </AppHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
         {/* Products Section */}
