@@ -35,6 +35,150 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      delivery_addresses: {
+        Row: {
+          address_line1: string
+          address_line2: string | null
+          city: string
+          created_at: string
+          customer_id: string
+          id: string
+          is_default: boolean
+          notes: string | null
+          postal_code: string
+          updated_at: string
+        }
+        Insert: {
+          address_line1: string
+          address_line2?: string | null
+          city: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_default?: boolean
+          notes?: string | null
+          postal_code: string
+          updated_at?: string
+        }
+        Update: {
+          address_line1?: string
+          address_line2?: string | null
+          city?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_default?: boolean
+          notes?: string | null
+          postal_code?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_assignments: {
+        Row: {
+          created_at: string
+          customer_id: string
+          delivery_address_id: string
+          delivery_fee: number
+          delivery_notes: string | null
+          delivery_time: string | null
+          driver_id: string | null
+          estimated_delivery: string | null
+          id: string
+          order_id: string
+          pickup_time: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          delivery_address_id: string
+          delivery_fee?: number
+          delivery_notes?: string | null
+          delivery_time?: string | null
+          driver_id?: string | null
+          estimated_delivery?: string | null
+          id?: string
+          order_id: string
+          pickup_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          delivery_address_id?: string
+          delivery_fee?: number
+          delivery_notes?: string | null
+          delivery_time?: string | null
+          driver_id?: string | null
+          estimated_delivery?: string | null
+          id?: string
+          order_id?: string
+          pickup_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_assignments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_assignments_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       floor_plans: {
         Row: {
           created_at: string

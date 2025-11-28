@@ -14,6 +14,8 @@ import AdminReports from "./pages/AdminReports";
 import Waiter from "./pages/Waiter";
 import WaiterOrder from "./pages/WaiterOrder";
 import Kitchen from "./pages/Kitchen";
+import Delivery from "./pages/Delivery";
+import NewDelivery from "./pages/NewDelivery";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/waiter" element={<Waiter />} />
             <Route path="/waiter/order/:orderId" element={<WaiterOrder />} />
             <Route path="/kitchen" element={<Kitchen />} />
+            <Route path="/delivery" element={<Delivery />} />
+            <Route path="/delivery/new" element={<NewDelivery />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
