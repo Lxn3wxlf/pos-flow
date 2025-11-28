@@ -49,21 +49,42 @@ const Admin = () => {
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <Link to="/admin/products">
+            <Link to="/admin/modifiers">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-primary/10 rounded-lg">
                     <Package className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>Products</CardTitle>
-                    <CardDescription>Manage inventory</CardDescription>
+                    <CardTitle>Modifiers</CardTitle>
+                    <CardDescription>Toppings & extras</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Add, edit, and organize products and categories
+                  Manage product modifiers, toppings, and customizations
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/combos">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Package className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Combos</CardTitle>
+                    <CardDescription>Meal deals</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Create and manage combo meals and bundle offers
                 </p>
               </CardContent>
             </Link>

@@ -35,6 +35,83 @@ export type Database = {
         }
         Relationships: []
       }
+      combo_components: {
+        Row: {
+          allows_substitution: boolean
+          category_id: string | null
+          combo_product_id: string
+          component_name: string
+          created_at: string
+          id: string
+          qty: number
+        }
+        Insert: {
+          allows_substitution?: boolean
+          category_id?: string | null
+          combo_product_id: string
+          component_name: string
+          created_at?: string
+          id?: string
+          qty?: number
+        }
+        Update: {
+          allows_substitution?: boolean
+          category_id?: string | null
+          combo_product_id?: string
+          component_name?: string
+          created_at?: string
+          id?: string
+          qty?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_components_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combo_components_combo_product_id_fkey"
+            columns: ["combo_product_id"]
+            isOneToOne: false
+            referencedRelation: "combo_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combo_products: {
+        Row: {
+          combo_description: string | null
+          created_at: string
+          id: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          combo_description?: string | null
+          created_at?: string
+          id?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          combo_description?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -251,6 +328,177 @@ export type Database = {
           },
         ]
       }
+      modifier_groups: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          max_selections: number | null
+          min_selections: number
+          name: string
+          selection_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number
+          name: string
+          selection_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number
+          name?: string
+          selection_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      modifiers: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_available: boolean
+          modifier_group_id: string
+          name: string
+          price_adjustment: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_available?: boolean
+          modifier_group_id: string
+          name: string
+          price_adjustment?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_available?: boolean
+          modifier_group_id?: string
+          name?: string
+          price_adjustment?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modifiers_modifier_group_id_fkey"
+            columns: ["modifier_group_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_item_combo_selections: {
+        Row: {
+          combo_component_id: string
+          created_at: string
+          id: string
+          order_item_id: string
+          qty: number
+          selected_product_id: string
+          selected_product_name: string
+        }
+        Insert: {
+          combo_component_id: string
+          created_at?: string
+          id?: string
+          order_item_id: string
+          qty?: number
+          selected_product_id: string
+          selected_product_name: string
+        }
+        Update: {
+          combo_component_id?: string
+          created_at?: string
+          id?: string
+          order_item_id?: string
+          qty?: number
+          selected_product_id?: string
+          selected_product_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_combo_selections_combo_component_id_fkey"
+            columns: ["combo_component_id"]
+            isOneToOne: false
+            referencedRelation: "combo_components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_combo_selections_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_combo_selections_selected_product_id_fkey"
+            columns: ["selected_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_item_modifiers: {
+        Row: {
+          created_at: string
+          id: string
+          modifier_id: string
+          modifier_name: string
+          order_item_id: string
+          price_adjustment: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modifier_id: string
+          modifier_name: string
+          order_item_id: string
+          price_adjustment?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modifier_id?: string
+          modifier_name?: string
+          order_item_id?: string
+          price_adjustment?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_modifiers_modifier_id_fkey"
+            columns: ["modifier_id"]
+            isOneToOne: false
+            referencedRelation: "modifiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_modifiers_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           cost_at_order: number
@@ -417,6 +665,45 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_modifiers: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean
+          modifier_group_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          modifier_group_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          modifier_group_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_modifiers_modifier_group_id_fkey"
+            columns: ["modifier_group_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_modifiers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
