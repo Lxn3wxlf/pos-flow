@@ -11,7 +11,7 @@ const Admin = () => {
   const { isOnline, isSyncing, sync, lastSync } = useSyncEngine(user?.id);
 
   if (!user) return <Navigate to="/auth" />;
-  if (profile?.role !== 'admin') return <Navigate to="/pos" />;
+  if (!profile?.roles?.includes('admin')) return <Navigate to="/pos" />;
 
   return (
     <div className="min-h-screen bg-background">
