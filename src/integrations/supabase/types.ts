@@ -114,27 +114,48 @@ export type Database = {
       }
       customers: {
         Row: {
+          address: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
           id: string
+          loyalty_points: number | null
           name: string
+          notes: string | null
           phone: string
+          preferences: Json | null
+          total_orders: number | null
+          total_spent: number | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           id?: string
+          loyalty_points?: number | null
           name: string
+          notes?: string | null
           phone: string
+          preferences?: Json | null
+          total_orders?: number | null
+          total_spent?: number | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           id?: string
+          loyalty_points?: number | null
           name?: string
+          notes?: string | null
           phone?: string
+          preferences?: Json | null
+          total_orders?: number | null
+          total_spent?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -571,12 +592,16 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          customer_id: string | null
           customer_name: string | null
+          discount_amount: number | null
           guest_count: number | null
           id: string
           notes: string | null
           order_number: string
           order_type: Database["public"]["Enums"]["order_type"]
+          pickup_time: string | null
+          promotion_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           table_id: string | null
           updated_at: string
@@ -584,12 +609,16 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_id?: string | null
           customer_name?: string | null
+          discount_amount?: number | null
           guest_count?: number | null
           id?: string
           notes?: string | null
           order_number: string
           order_type?: Database["public"]["Enums"]["order_type"]
+          pickup_time?: string | null
+          promotion_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           table_id?: string | null
           updated_at?: string
@@ -597,18 +626,36 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_id?: string | null
           customer_name?: string | null
+          discount_amount?: number | null
           guest_count?: number | null
           id?: string
           notes?: string | null
           order_number?: string
           order_type?: Database["public"]["Enums"]["order_type"]
+          pickup_time?: string | null
+          promotion_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           table_id?: string | null
           updated_at?: string
           waiter_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_table_id_fkey"
             columns: ["table_id"]
@@ -795,6 +842,121 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      promotion_usage: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          discount_applied: number
+          id: string
+          order_id: string | null
+          promotion_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          discount_applied: number
+          id?: string
+          order_id?: string | null
+          promotion_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          discount_applied?: number
+          id?: string
+          order_id?: string | null
+          promotion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_usage_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_usage_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          applies_to: string
+          created_at: string | null
+          days_of_week: number[] | null
+          description: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string
+          id: string
+          is_active: boolean | null
+          max_discount_amount: number | null
+          min_purchase_amount: number | null
+          name: string
+          start_date: string
+          target_ids: string[] | null
+          time_end: string | null
+          time_start: string | null
+          updated_at: string | null
+          usage_count: number | null
+          usage_limit: number | null
+        }
+        Insert: {
+          applies_to: string
+          created_at?: string | null
+          days_of_week?: number[] | null
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          max_discount_amount?: number | null
+          min_purchase_amount?: number | null
+          name: string
+          start_date: string
+          target_ids?: string[] | null
+          time_end?: string | null
+          time_start?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+        }
+        Update: {
+          applies_to?: string
+          created_at?: string | null
+          days_of_week?: number[] | null
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          max_discount_amount?: number | null
+          min_purchase_amount?: number | null
+          name?: string
+          start_date?: string
+          target_ids?: string[] | null
+          time_end?: string | null
+          time_start?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
         }
         Relationships: []
       }
@@ -998,7 +1160,7 @@ export type Database = {
         | "served"
         | "paid"
         | "cancelled"
-      order_type: "dine_in" | "takeout" | "delivery"
+      order_type: "dine_in" | "takeout" | "delivery" | "collection"
       user_role: "admin" | "cashier"
     }
     CompositeTypes: {
@@ -1138,7 +1300,7 @@ export const Constants = {
         "paid",
         "cancelled",
       ],
-      order_type: ["dine_in", "takeout", "delivery"],
+      order_type: ["dine_in", "takeout", "delivery", "collection"],
       user_role: ["admin", "cashier"],
     },
   },
