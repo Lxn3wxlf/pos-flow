@@ -158,7 +158,7 @@ const AdminReports = () => {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${reportData.totalRevenue.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">R{reportData.totalRevenue.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">
                     Gross sales
                   </p>
@@ -171,7 +171,7 @@ const AdminReports = () => {
                   <TrendingUp className="h-4 w-4 text-success" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-success">${reportData.totalProfit.toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-success">R{reportData.totalProfit.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">
                     Net profit
                   </p>
@@ -203,7 +203,7 @@ const AdminReports = () => {
                     <p className="text-sm font-medium">Average Order Value</p>
                     <p className="text-xs text-muted-foreground">Per transaction</p>
                   </div>
-                  <div className="text-2xl font-bold">${reportData.averageOrderValue.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">R{reportData.averageOrderValue.toFixed(2)}</div>
                 </div>
                 <div className="flex justify-between items-center p-4 border rounded-lg">
                   <div>

@@ -104,13 +104,13 @@ const AdminSales = () => {
                       <TableCell>
                         <Badge variant="outline">{sale.payment_method}</Badge>
                       </TableCell>
-                      <TableCell>${sale.subtotal.toFixed(2)}</TableCell>
-                      <TableCell>${sale.tax_amount.toFixed(2)}</TableCell>
+                      <TableCell>R{sale.subtotal.toFixed(2)}</TableCell>
+                      <TableCell>R{sale.tax_amount.toFixed(2)}</TableCell>
                       <TableCell>
-                        {sale.discount_amount > 0 ? `-$${sale.discount_amount.toFixed(2)}` : '-'}
+                        {sale.discount_amount > 0 ? `-R${sale.discount_amount.toFixed(2)}` : '-'}
                       </TableCell>
                       <TableCell className="text-right font-bold">
-                        ${sale.total.toFixed(2)}
+                        R{sale.total.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))}
