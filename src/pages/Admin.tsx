@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
-import { Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users, MapPin, ChefHat } from 'lucide-react';
+import { Package, BarChart3, History as HistoryIcon, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users, MapPin, ChefHat, Calendar, Clock, Users as UsersIcon } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import logo from '@/assets/casbah-logo.svg';
 
@@ -121,7 +121,7 @@ const Admin = () => {
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-accent/10 rounded-lg">
-                    <History className="h-6 w-6 text-accent" />
+                    <HistoryIcon className="h-6 w-6 text-accent" />
                   </div>
                   <div>
                     <CardTitle>Sales History</CardTitle>
@@ -268,7 +268,7 @@ const Admin = () => {
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-purple-500/10 rounded-lg">
-                    <Users className="h-6 w-6 text-purple-500" />
+                    <UsersIcon className="h-6 w-6 text-purple-500" />
                   </div>
                   <div>
                     <CardTitle>Customers</CardTitle>
@@ -279,6 +279,69 @@ const Admin = () => {
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Manage customer details, history, and loyalty points
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/schedule">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-teal-500/10 rounded-lg">
+                    <Calendar className="h-6 w-6 text-teal-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Employee Schedule</CardTitle>
+                    <CardDescription>Shift management</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Create and manage employee shifts and schedules
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/time-tracking">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-cyan-500/10 rounded-lg">
+                    <Clock className="h-6 w-6 text-cyan-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Time Tracking</CardTitle>
+                    <CardDescription>Clock in/out</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Employee time tracking with labor cost reporting
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/reservations">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-pink-500/10 rounded-lg">
+                    <UsersIcon className="h-6 w-6 text-pink-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Reservations</CardTitle>
+                    <CardDescription>Table bookings</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Manage reservations, waitlist, and table bookings
                 </p>
               </CardContent>
             </Link>

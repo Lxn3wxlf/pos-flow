@@ -25,6 +25,9 @@ import NewDelivery from "./pages/NewDelivery";
 import CustomerDisplay from "./pages/CustomerDisplay";
 import AdminInventory from "./pages/AdminInventory";
 import AdminLocations from "./pages/AdminLocations";
+import AdminSchedule from "./pages/AdminSchedule";
+import TimeTracking from "./pages/TimeTracking";
+import AdminReservations from "./pages/AdminReservations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +61,9 @@ const App = () => (
             <Route path="/customer-display" element={<CustomerDisplay />} />
             <Route path="/admin/inventory" element={<AdminInventory />} />
             <Route path="/admin/locations" element={<AdminLocations />} />
+            <Route path="/admin/schedule" element={<AdminSchedule />} />
+            <Route path="/time-tracking" element={<TimeTracking />} />
+            <Route path="/admin/reservations" element={<AdminReservations />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
