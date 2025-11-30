@@ -14,6 +14,9 @@ export interface LocalProduct {
   is_active: boolean;
   image_url?: string;
   synced_at: Date;
+  pricing_type?: string;
+  price_per_unit?: number;
+  unit_type?: string;
 }
 
 export interface LocalSale {
