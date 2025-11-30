@@ -11,9 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Search, ShoppingCart, Wifi, WifiOff, LogOut, Trash2, Plus, Minus } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
+import logo from '@/assets/casbah-logo.svg';
 
 interface CartItem {
   product: LocalProduct;
@@ -227,7 +228,7 @@ const POS = () => {
       <AppHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <ShoppingCart className="h-6 w-6 text-primary" />
+            <img src={logo} alt="Casbah Logo" className="h-8 w-auto" />
             <div>
               <h1 className="text-xl font-bold">POS Register</h1>
               <p className="text-sm text-muted-foreground">{profile?.full_name}</p>

@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navigate, Link } from 'react-router-dom';
-import { LayoutDashboard, Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users } from 'lucide-react';
+import { Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
+import logo from '@/assets/casbah-logo.svg';
 
 const Admin = () => {
   const { user, profile, signOut } = useAuth();
@@ -19,7 +20,7 @@ const Admin = () => {
       <AppHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <LayoutDashboard className="h-6 w-6 text-primary" />
+            <img src={logo} alt="Casbah Logo" className="h-8 w-auto" />
             <div>
               <h1 className="text-xl font-bold">Admin Dashboard</h1>
               <p className="text-sm text-muted-foreground">{profile?.full_name}</p>
