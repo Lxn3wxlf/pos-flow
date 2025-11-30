@@ -277,6 +277,78 @@ export type Database = {
           },
         ]
       }
+      eod_sessions: {
+        Row: {
+          actual_cash: number | null
+          admin_notes: string | null
+          cash_difference: number | null
+          cashier_id: string
+          cashier_notes: string | null
+          created_at: string
+          expected_cash: number
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shift_date: string
+          status: string
+          submitted_at: string | null
+          total_sales: number
+          total_transactions: number
+          updated_at: string
+        }
+        Insert: {
+          actual_cash?: number | null
+          admin_notes?: string | null
+          cash_difference?: number | null
+          cashier_id: string
+          cashier_notes?: string | null
+          created_at?: string
+          expected_cash?: number
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shift_date?: string
+          status?: string
+          submitted_at?: string | null
+          total_sales?: number
+          total_transactions?: number
+          updated_at?: string
+        }
+        Update: {
+          actual_cash?: number | null
+          admin_notes?: string | null
+          cash_difference?: number | null
+          cashier_id?: string
+          cashier_notes?: string | null
+          created_at?: string
+          expected_cash?: number
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shift_date?: string
+          status?: string
+          submitted_at?: string | null
+          total_sales?: number
+          total_transactions?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eod_sessions_cashier_id_fkey"
+            columns: ["cashier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eod_sessions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       floor_plans: {
         Row: {
           created_at: string
