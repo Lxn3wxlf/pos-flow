@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ShoppingCart } from 'lucide-react';
+import logo from '@/assets/casbah-logo.svg';
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -104,11 +104,9 @@ const Auth = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary rounded-full">
-              <ShoppingCart className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <img src={logo} alt="Casbah Logo" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-2xl font-bold">POS System</CardTitle>
+          <CardTitle className="text-2xl font-bold">Casbah POS</CardTitle>
           <CardDescription>
             Sign in to your account or create a new one
           </CardDescription>
