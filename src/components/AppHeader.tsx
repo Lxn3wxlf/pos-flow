@@ -15,17 +15,20 @@ const AppHeader = ({ children }: AppHeaderProps) => {
   return (
     <div className="border-b bg-card">
       <div className="p-4 space-y-3">
-        {/* Logo and contact info */}
-        <div className="flex flex-col items-center gap-2">
+        {/* Header with logo and contact info */}
+        <div className="flex items-center justify-between">
+          {/* Logo - Home button */}
           <Button
             variant="ghost"
             onClick={() => navigate('/admin')}
-            className="h-16 px-4"
+            className="h-12 px-2"
             aria-label="Go to home"
           >
-            <img src={logo} alt="Casbah Logo" className="h-12 w-auto" />
+            <img src={logo} alt="Casbah Logo" className="h-10 w-auto" />
           </Button>
-          <div className="flex flex-col items-center gap-1 text-sm text-muted-foreground">
+
+          {/* Contact info - Center */}
+          <div className="flex flex-col items-center gap-0.5 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Phone className="h-3 w-3" />
               <span>065 683 5702</span>
@@ -35,6 +38,9 @@ const AppHeader = ({ children }: AppHeaderProps) => {
               <span>194 Marine Drive</span>
             </div>
           </div>
+
+          {/* Spacer for balance */}
+          <div className="w-16"></div>
         </div>
 
         {/* Back button - shown on all pages except home */}
