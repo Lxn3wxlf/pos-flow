@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import logo from '@/assets/casbah-logo.svg';
@@ -275,6 +275,18 @@ const POS = () => {
                     className="h-auto flex-col items-start p-4 hover:bg-accent"
                     onClick={() => addToCart(product)}
                   >
+                    {/* Image placeholder */}
+                    <div className="w-full aspect-square mb-3 rounded-md bg-muted flex items-center justify-center overflow-hidden">
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="h-12 w-12 text-muted-foreground/40" />
+                      )}
+                    </div>
                     <span className="font-semibold text-sm">{product.name}</span>
                     <span className="text-xs text-muted-foreground">{product.sku}</span>
                     <span className="text-lg font-bold text-primary mt-2">R{product.price.toFixed(2)}</span>

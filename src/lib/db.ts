@@ -12,6 +12,7 @@ export interface LocalProduct {
   stock_qty: number;
   category_id?: string;
   is_active: boolean;
+  image_url?: string;
   synced_at: Date;
 }
 
