@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
-import { Package, BarChart3, History as HistoryIcon, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users, MapPin, ChefHat, Calendar, Clock, Users as UsersIcon } from 'lucide-react';
+import { BarChart3, Calendar, ChefHat, DollarSign, MapPin, Package, Settings, ShoppingBag, Users, Utensils, Clock, Percent, Puzzle, LogOut, Wifi, WifiOff, RefreshCw, Truck, Users as UsersIcon } from "lucide-react";
 import AppHeader from '@/components/AppHeader';
 import logo from '@/assets/casbah-logo.svg';
 
@@ -117,11 +117,32 @@ const Admin = () => {
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/reports">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-success/10 rounded-lg">
+                    <BarChart3 className="h-6 w-6 text-success" />
+                  </div>
+                  <div>
+                    <CardTitle>Reports</CardTitle>
+                    <CardDescription>Analytics & insights</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Sales reports, profit analysis, and exports
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <Link to="/admin/sales">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-accent/10 rounded-lg">
-                    <HistoryIcon className="h-6 w-6 text-accent" />
+                    <DollarSign className="h-6 w-6 text-accent" />
                   </div>
                   <div>
                     <CardTitle>Sales History</CardTitle>
@@ -138,21 +159,21 @@ const Admin = () => {
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <Link to="/admin/reports">
+            <Link to="/admin/eod">
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-success/10 rounded-lg">
-                    <BarChart3 className="h-6 w-6 text-success" />
+                  <div className="p-3 bg-orange-500/10 rounded-lg">
+                    <LogOut className="h-6 w-6 text-orange-500" />
                   </div>
                   <div>
-                    <CardTitle>Reports</CardTitle>
-                    <CardDescription>Analytics & insights</CardDescription>
+                    <CardTitle>End of Day</CardTitle>
+                    <CardDescription>Review EOD reports</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Sales reports, profit analysis, and exports
+                  Review and approve cashier end of day submissions
                 </p>
               </CardContent>
             </Link>

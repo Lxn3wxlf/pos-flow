@@ -10,10 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
+import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
+import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/casbah-logo.svg';
 
 interface CartItem {
@@ -32,6 +35,41 @@ const POS = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isEODOpen, setIsEODOpen] = useState(false);
+  const [hasPendingEOD, setHasPendingEOD] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+
+  // Check for pending EOD on mount and periodically
+  useEffect(() => {
+    checkPendingEOD();
+    const interval = setInterval(checkPendingEOD, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const checkPendingEOD = async () => {
+    if (!user) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('eod_sessions')
+      .select('status')
+      .eq('cashier_id', user.id)
+      .eq('shift_date', today)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error checking EOD:', error);
+      return;
+    }
+
+    if (data) {
+      setHasPendingEOD(true);
+      setIsLocked(data.status === 'pending');
+    } else {
+      setHasPendingEOD(false);
+      setIsLocked(false);
+    }
+  };
 
   // Load products from IndexedDB
   const products = useLiveQuery(
@@ -51,6 +89,11 @@ const POS = () => {
   ).slice(0, 20);
 
   const addToCart = (product: LocalProduct) => {
+    if (isLocked) {
+      toast.error("POS is locked pending EOD approval");
+      return;
+    }
+
     const existing = cart.find(item => item.product.id === product.id);
     if (existing) {
       setCart(cart.map(item =>
@@ -129,6 +172,11 @@ const POS = () => {
   const completeSale = async () => {
     if (cart.length === 0) {
       toast.error('Cart is empty');
+      return;
+    }
+
+    if (isLocked) {
+      toast.error("POS is locked pending EOD approval");
       return;
     }
 
@@ -308,11 +356,23 @@ const POS = () => {
             {isOnline ? 'Online' : 'Offline'}
           </Badge>
           {isSyncing && <Badge variant="secondary">Syncing...</Badge>}
+          <Button variant="ghost" size="sm" onClick={() => setIsEODOpen(true)} disabled={hasPendingEOD || isLocked}>
+            <LogOut className="h-4 w-4 mr-2" />
+            End of Day
+          </Button>
           <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </AppHeader>
+
+      {isLocked && (
+        <Alert className="m-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+          <AlertDescription className="text-yellow-900 dark:text-yellow-100 font-medium">
+            ⚠️ POS is locked. Your End of Day report is pending admin approval.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
         {/* Products Section */}
@@ -326,63 +386,70 @@ const POS = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1"
+                  disabled={isLocked}
                 />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {filteredProducts?.map(product => (
-                  <Button
-                    key={product.id}
-                    variant="outline"
-                    className="h-auto flex-col items-start p-4 hover:bg-accent"
-                    onClick={() => {
-                      if (product.pricing_type === 'weight_based') {
-                        // Show weight selection dialog
-                        const weight = prompt('Enter weight amount (e.g., 0.3, 0.5, 1):');
-                        if (weight && !isNaN(parseFloat(weight))) {
-                          addToCart(product);
-                          const lastItem = cart[cart.length - 1];
-                          if (!lastItem || lastItem.product.id !== product.id) {
-                            setCart([...cart, { 
-                              product, 
-                              qty: 1, 
-                              weight_amount: parseFloat(weight),
-                              weight_unit: product.unit_type || 'kg'
-                            }]);
+              {isLocked ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="text-lg font-medium">POS Locked</p>
+                  <p className="text-sm">Waiting for admin to approve your End of Day report</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {filteredProducts?.map(product => (
+                    <Button
+                      key={product.id}
+                      variant="outline"
+                      className="h-auto flex-col items-start p-4 hover:bg-accent"
+                      onClick={() => {
+                        if (product.pricing_type === 'weight_based') {
+                          const weight = prompt('Enter weight amount (e.g., 0.3, 0.5, 1):');
+                          if (weight && !isNaN(parseFloat(weight))) {
+                            addToCart(product);
+                            const lastItem = cart[cart.length - 1];
+                            if (!lastItem || lastItem.product.id !== product.id) {
+                              setCart([...cart, { 
+                                product, 
+                                qty: 1, 
+                                weight_amount: parseFloat(weight),
+                                weight_unit: product.unit_type || 'kg'
+                              }]);
+                            }
                           }
+                        } else {
+                          addToCart(product);
                         }
-                      } else {
-                        addToCart(product);
-                      }
-                    }}
-                  >
-                    {/* Image placeholder */}
-                    <div className="w-full aspect-square mb-3 rounded-md bg-muted flex items-center justify-center overflow-hidden">
-                      {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
+                      }}
+                      disabled={isLocked}
+                    >
+                      <div className="w-full aspect-square mb-3 rounded-md bg-muted flex items-center justify-center overflow-hidden">
+                        {product.image_url ? (
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="h-12 w-12 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <span className="font-semibold text-sm">{product.name}</span>
+                      <span className="text-xs text-muted-foreground">{product.sku}</span>
+                      {product.pricing_type === 'weight_based' ? (
+                        <span className="text-lg font-bold text-primary mt-2">
+                          R{product.price_per_unit?.toFixed(2)}/{product.unit_type || 'kg'}
+                        </span>
                       ) : (
-                        <Package className="h-12 w-12 text-muted-foreground/40" />
+                        <span className="text-lg font-bold text-primary mt-2">R{product.price.toFixed(2)}</span>
                       )}
-                    </div>
-                    <span className="font-semibold text-sm">{product.name}</span>
-                    <span className="text-xs text-muted-foreground">{product.sku}</span>
-                    {product.pricing_type === 'weight_based' ? (
-                      <span className="text-lg font-bold text-primary mt-2">
-                        R{product.price_per_unit?.toFixed(2)}/{product.unit_type || 'kg'}
-                      </span>
-                    ) : (
-                      <span className="text-lg font-bold text-primary mt-2">R{product.price.toFixed(2)}</span>
-                    )}
-                    <Badge variant="secondary" className="mt-1">Stock: {product.stock_qty}</Badge>
-                  </Button>
-                ))}
-              </div>
-              {filteredProducts?.length === 0 && (
+                      <Badge variant="secondary" className="mt-1">Stock: {product.stock_qty}</Badge>
+                    </Button>
+                  ))}
+                </div>
+              )}
+              {filteredProducts?.length === 0 && !isLocked && (
                 <p className="text-center text-muted-foreground py-8">No products found</p>
               )}
             </CardContent>
@@ -413,25 +480,27 @@ const POS = () => {
                             </p>
                             <p className="text-xs text-muted-foreground">R{itemPrice.toFixed(2)} each</p>
                           </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6"
-                            onClick={() => updateQty(item.product.id, item.qty - 1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center font-medium">{item.qty}</span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6"
-                            onClick={() => updateQty(item.product.id, item.qty + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => updateQty(item.product.id, item.qty - 1)}
+                              disabled={isLocked}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium">{item.qty}</span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => updateQty(item.product.id, item.qty + 1)}
+                              disabled={isLocked}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                           <div className="text-right">
                             <p className="font-bold">R{(itemPrice * item.qty).toFixed(2)}</p>
                           </div>
@@ -440,6 +509,7 @@ const POS = () => {
                             variant="ghost"
                             className="h-6 w-6 text-destructive"
                             onClick={() => removeFromCart(item.product.id)}
+                            disabled={isLocked}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -468,47 +538,37 @@ const POS = () => {
                         value={discountAmount}
                         onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
                         className="w-24 h-8"
+                        disabled={isLocked}
                       />
                     </div>
                     <Separator />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total:</span>
-                      <span className="text-primary">R{totals.total.toFixed(2)}</span>
+                      <span>R{totals.total.toFixed(2)}</span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Payment Method</label>
-                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={isLocked}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="card">
-                          <div className="flex items-center gap-2">
-                            Card
-                            <Badge variant="secondary" className="text-xs">Yoco</Badge>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="mobile">Mobile Payment</SelectItem>
+                        <SelectItem value="card">Card (Yoco)</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
-                    {paymentMethod === 'card' && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Badge variant="outline" className="text-xs">Yoco Payment Gateway</Badge>
-                        Card payments processed securely
-                      </p>
-                    )}
                   </div>
 
-                  <Button
-                    onClick={completeSale}
-                    className="w-full"
+                  <Button 
+                    className="w-full" 
                     size="lg"
-                    disabled={isProcessingPayment}
+                    onClick={completeSale}
+                    disabled={cart.length === 0 || isProcessingPayment || isLocked}
                   >
-                    {isProcessingPayment ? 'Processing Payment...' : 'Complete Sale'}
+                    {isProcessingPayment ? 'Processing...' : `Complete Sale (R${totals.total.toFixed(2)})`}
                   </Button>
                 </>
               )}
@@ -516,6 +576,13 @@ const POS = () => {
           </Card>
         </div>
       </div>
+
+      {/* EOD Dialog */}
+      <EODSubmissionDialog
+        open={isEODOpen}
+        onOpenChange={setIsEODOpen}
+        onSubmitted={checkPendingEOD}
+      />
     </div>
   );
 };

@@ -11,6 +11,7 @@ import Admin from "./pages/Admin";
 import AdminProducts from "./pages/AdminProducts";
 import AdminSales from "./pages/AdminSales";
 import AdminReports from "./pages/AdminReports";
+import AdminEOD from "./pages/AdminEOD";
 import AdminModifiers from "./pages/AdminModifiers";
 import AdminCombos from "./pages/AdminCombos";
 import AdminProductModifiers from "./pages/AdminProductModifiers";
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/sales" element={<AdminSales />} />
           <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/eod" element={<AdminEOD />} />
           <Route path="/admin/modifiers" element={<AdminModifiers />} />
           <Route path="/admin/combos" element={<AdminCombos />} />
           <Route path="/admin/product-modifiers" element={<AdminProductModifiers />} />
