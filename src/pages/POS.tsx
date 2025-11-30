@@ -227,18 +227,18 @@ const POS = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader>
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/admin')}
-          className="flex items-center gap-3 h-auto px-2 py-1"
-          aria-label="Go to home"
-        >
-          <img src={logo} alt="Casbah Logo" className="h-8 w-auto" />
+        <div className="flex items-center gap-3">
+          <img 
+            src={logo} 
+            alt="Casbah Logo" 
+            className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={() => navigate('/admin')}
+          />
           <div className="text-left">
             <h1 className="text-xl font-bold">POS Register</h1>
             <p className="text-sm text-muted-foreground">{profile?.full_name}</p>
           </div>
-        </Button>
+        </div>
         <div className="flex items-center gap-2">
           <Badge variant={isOnline ? "default" : "destructive"} className="gap-1">
             {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
