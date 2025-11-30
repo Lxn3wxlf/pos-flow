@@ -522,6 +522,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          completed_at: string | null
           cost_at_order: number
           created_at: string
           id: string
@@ -534,11 +535,13 @@ export type Database = {
           product_sku: string
           qty: number
           special_instructions: string | null
+          started_at: string | null
           status: Database["public"]["Enums"]["order_status"]
           tax_rate: number
           updated_at: string
         }
         Insert: {
+          completed_at?: string | null
           cost_at_order: number
           created_at?: string
           id?: string
@@ -551,11 +554,13 @@ export type Database = {
           product_sku: string
           qty: number
           special_instructions?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           tax_rate?: number
           updated_at?: string
         }
         Update: {
+          completed_at?: string | null
           cost_at_order?: number
           created_at?: string
           id?: string
@@ -568,6 +573,7 @@ export type Database = {
           product_sku?: string
           qty?: number
           special_instructions?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           tax_rate?: number
           updated_at?: string
@@ -762,6 +768,7 @@ export type Database = {
           cost: number
           created_at: string
           description: string | null
+          estimated_prep_minutes: number | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -779,6 +786,7 @@ export type Database = {
           cost?: number
           created_at?: string
           description?: string | null
+          estimated_prep_minutes?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -798,6 +806,7 @@ export type Database = {
           cost?: number
           created_at?: string
           description?: string | null
+          estimated_prep_minutes?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean
