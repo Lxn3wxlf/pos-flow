@@ -3,7 +3,7 @@ import { useSyncEngine } from '@/hooks/useSyncEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import logo from '@/assets/casbah-logo.svg';
@@ -11,6 +11,7 @@ import logo from '@/assets/casbah-logo.svg';
 const Admin = () => {
   const { user, profile, signOut } = useAuth();
   const { isOnline, isSyncing, sync, lastSync } = useSyncEngine(user?.id);
+  const navigate = useNavigate();
 
   if (!user) return <Navigate to="/auth" />;
   if (!profile?.roles?.includes('admin')) return <Navigate to="/pos" />;
@@ -19,13 +20,18 @@ const Admin = () => {
     <div className="min-h-screen bg-background">
       <AppHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/admin')}
+            className="flex items-center gap-4 h-auto px-2 py-1"
+            aria-label="Go to home"
+          >
             <img src={logo} alt="Casbah Logo" className="h-8 w-auto" />
-            <div>
+            <div className="text-left">
               <h1 className="text-xl font-bold">Admin Dashboard</h1>
               <p className="text-sm text-muted-foreground">{profile?.full_name}</p>
             </div>
-          </div>
+          </Button>
           <div className="flex items-center gap-2">
             <Badge variant={isOnline ? "default" : "destructive"} className="gap-1">
               {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
