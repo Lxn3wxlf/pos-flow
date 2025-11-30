@@ -485,10 +485,21 @@ const POS = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="card">
+                          <div className="flex items-center gap-2">
+                            Card
+                            <Badge variant="secondary" className="text-xs">Yoco</Badge>
+                          </div>
+                        </SelectItem>
                         <SelectItem value="mobile">Mobile Payment</SelectItem>
                       </SelectContent>
                     </Select>
+                    {paymentMethod === 'card' && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Badge variant="outline" className="text-xs">Yoco Payment Gateway</Badge>
+                        Card payments processed securely
+                      </p>
+                    )}
                   </div>
 
                   <Button

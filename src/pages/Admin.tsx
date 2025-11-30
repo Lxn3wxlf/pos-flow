@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
-import { Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users } from 'lucide-react';
+import { Package, BarChart3, History, LogOut, Wifi, WifiOff, RefreshCw, Truck, Percent, Users, MapPin, ChefHat } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import logo from '@/assets/casbah-logo.svg';
 
@@ -153,6 +153,69 @@ const Admin = () => {
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Sales reports, profit analysis, and exports
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/inventory">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-green-500/10 rounded-lg">
+                    <Package className="h-6 w-6 text-green-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Inventory</CardTitle>
+                    <CardDescription>Stock management</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Track stock levels, reorder points, and supplier management
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/locations">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-indigo-500/10 rounded-lg">
+                    <MapPin className="h-6 w-6 text-indigo-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Locations</CardTitle>
+                    <CardDescription>Multi-branch setup</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Manage multiple business locations and branch operations
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/kitchen-display">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-red-500/10 rounded-lg">
+                    <ChefHat className="h-6 w-6 text-red-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Kitchen Display</CardTitle>
+                    <CardDescription>Real-time orders</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Live kitchen display system with order tracking and alerts
                 </p>
               </CardContent>
             </Link>
