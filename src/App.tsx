@@ -24,11 +24,11 @@ import Delivery from "./pages/Delivery";
 import NewDelivery from "./pages/NewDelivery";
 import CustomerDisplay from "./pages/CustomerDisplay";
 import AdminInventory from "./pages/AdminInventory";
-import AdminLocations from "./pages/AdminLocations";
 import AdminSchedule from "./pages/AdminSchedule";
 import TimeTracking from "./pages/TimeTracking";
 import AdminReservations from "./pages/AdminReservations";
 import NotFound from "./pages/NotFound";
+import AdminLocations from "./pages/AdminLocations";
 
 const queryClient = new QueryClient();
 
