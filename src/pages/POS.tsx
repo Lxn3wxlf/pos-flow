@@ -19,6 +19,8 @@ import logo from '@/assets/casbah-logo.svg';
 interface CartItem {
   product: LocalProduct;
   qty: number;
+  weight_amount?: number;
+  weight_unit?: string;
 }
 
 const POS = () => {
@@ -29,6 +31,7 @@ const POS = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Load products from IndexedDB
   const products = useLiveQuery(
@@ -75,13 +78,52 @@ const POS = () => {
     setCart(cart.filter(item => item.product.id !== productId));
   };
 
+  const getItemPrice = (item: CartItem) => {
+    if (item.product.pricing_type === 'weight_based' && item.weight_amount && item.product.price_per_unit) {
+      return item.product.price_per_unit * item.weight_amount;
+    }
+    return item.product.price;
+  };
+
   const calculateTotals = () => {
-    const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.qty), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (getItemPrice(item) * item.qty), 0);
     const taxAmount = cart.reduce((sum, item) => 
-      sum + (item.product.price * item.qty * item.product.tax_rate / 100), 0
+      sum + (getItemPrice(item) * item.qty * item.product.tax_rate / 100), 0
     );
     const total = subtotal + taxAmount - discountAmount;
     return { subtotal, taxAmount, total };
+  };
+
+  const processYocoPayment = async (saleId: string, amount: number) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-yoco-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          amount,
+          currency: 'ZAR',
+          sale_id: saleId,
+          metadata: {
+            cashier_id: user!.id,
+            timestamp: new Date().toISOString(),
+          },
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Payment processing failed');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Yoco payment error:', error);
+      throw error;
+    }
   };
 
   const completeSale = async () => {
@@ -96,6 +138,8 @@ const POS = () => {
       toast.error('Total cannot be negative');
       return;
     }
+
+    setIsProcessingPayment(true);
 
     try {
       const saleId = crypto.randomUUID();
@@ -115,8 +159,21 @@ const POS = () => {
         sync_attempts: 0
       });
 
+      // Process Yoco payment if card payment is selected
+      if (paymentMethod === 'card') {
+        try {
+          await processYocoPayment(saleId, total);
+          toast.success('Card payment processed successfully');
+        } catch (error) {
+          toast.error('Card payment failed. Please try again or use another payment method.');
+          setIsProcessingPayment(false);
+          return;
+        }
+      }
+
       // Save sale items
       for (const item of cart) {
+        const itemPrice = getItemPrice(item);
         await db.sale_items.add({
           id: crypto.randomUUID(),
           sale_id: saleId,
@@ -124,10 +181,10 @@ const POS = () => {
           product_name: item.product.name,
           product_sku: item.product.sku,
           qty: item.qty,
-          price_at_sale: item.product.price,
+          price_at_sale: itemPrice,
           cost_at_sale: item.product.cost,
           tax_rate: item.product.tax_rate,
-          line_total: item.product.price * item.qty
+          line_total: itemPrice * item.qty
         });
 
         // Update local stock
@@ -151,6 +208,8 @@ const POS = () => {
     } catch (error) {
       console.error('Error completing sale:', error);
       toast.error('Failed to complete sale');
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -178,12 +237,16 @@ const POS = () => {
           <p>${new Date().toLocaleString()}</p>
         </div>
         <div class="line"></div>
-        ${items.map(item => `
-          <div class="item">
-            <span>${item.product.name} x${item.qty}</span>
-            <span>R${(item.product.price * item.qty).toFixed(2)}</span>
-          </div>
-        `).join('')}
+        ${items.map(item => {
+          const itemPrice = getItemPrice(item);
+          const weightInfo = item.weight_amount ? ` (${item.weight_amount}${item.weight_unit})` : '';
+          return `
+            <div class="item">
+              <span>${item.product.name}${weightInfo} x${item.qty}</span>
+              <span>R${(itemPrice * item.qty).toFixed(2)}</span>
+            </div>
+          `;
+        }).join('')}
         <div class="line"></div>
         <div class="totals">
           <div class="item">
@@ -273,7 +336,26 @@ const POS = () => {
                     key={product.id}
                     variant="outline"
                     className="h-auto flex-col items-start p-4 hover:bg-accent"
-                    onClick={() => addToCart(product)}
+                    onClick={() => {
+                      if (product.pricing_type === 'weight_based') {
+                        // Show weight selection dialog
+                        const weight = prompt('Enter weight amount (e.g., 0.3, 0.5, 1):');
+                        if (weight && !isNaN(parseFloat(weight))) {
+                          addToCart(product);
+                          const lastItem = cart[cart.length - 1];
+                          if (!lastItem || lastItem.product.id !== product.id) {
+                            setCart([...cart, { 
+                              product, 
+                              qty: 1, 
+                              weight_amount: parseFloat(weight),
+                              weight_unit: product.unit_type || 'kg'
+                            }]);
+                          }
+                        }
+                      } else {
+                        addToCart(product);
+                      }
+                    }}
                   >
                     {/* Image placeholder */}
                     <div className="w-full aspect-square mb-3 rounded-md bg-muted flex items-center justify-center overflow-hidden">
@@ -289,7 +371,13 @@ const POS = () => {
                     </div>
                     <span className="font-semibold text-sm">{product.name}</span>
                     <span className="text-xs text-muted-foreground">{product.sku}</span>
-                    <span className="text-lg font-bold text-primary mt-2">R{product.price.toFixed(2)}</span>
+                    {product.pricing_type === 'weight_based' ? (
+                      <span className="text-lg font-bold text-primary mt-2">
+                        R{product.price_per_unit?.toFixed(2)}/{product.unit_type || 'kg'}
+                      </span>
+                    ) : (
+                      <span className="text-lg font-bold text-primary mt-2">R{product.price.toFixed(2)}</span>
+                    )}
                     <Badge variant="secondary" className="mt-1">Stock: {product.stock_qty}</Badge>
                   </Button>
                 ))}
@@ -314,12 +402,17 @@ const POS = () => {
               ) : (
                 <>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {cart.map(item => (
-                      <div key={item.product.id} className="flex items-center gap-2 p-2 border rounded">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{item.product.name}</p>
-                          <p className="text-xs text-muted-foreground">R{item.product.price.toFixed(2)} each</p>
-                        </div>
+                    {cart.map(item => {
+                      const itemPrice = getItemPrice(item);
+                      return (
+                        <div key={item.product.id} className="flex items-center gap-2 p-2 border rounded">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">
+                              {item.product.name}
+                              {item.weight_amount && ` (${item.weight_amount}${item.weight_unit})`}
+                            </p>
+                            <p className="text-xs text-muted-foreground">R{itemPrice.toFixed(2)} each</p>
+                          </div>
                         <div className="flex items-center gap-1">
                           <Button
                             size="icon"
@@ -339,19 +432,20 @@ const POS = () => {
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold">R{(item.product.price * item.qty).toFixed(2)}</p>
+                          <div className="text-right">
+                            <p className="font-bold">R{(itemPrice * item.qty).toFixed(2)}</p>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-destructive"
+                            onClick={() => removeFromCart(item.product.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 text-destructive"
-                          onClick={() => removeFromCart(item.product.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <Separator />
@@ -401,8 +495,9 @@ const POS = () => {
                     onClick={completeSale}
                     className="w-full"
                     size="lg"
+                    disabled={isProcessingPayment}
                   >
-                    Complete Sale
+                    {isProcessingPayment ? 'Processing Payment...' : 'Complete Sale'}
                   </Button>
                 </>
               )}

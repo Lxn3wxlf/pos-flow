@@ -27,6 +27,10 @@ interface Product {
   is_active: boolean;
   image_url?: string;
   estimated_prep_minutes?: number;
+  kitchen_station?: string;
+  pricing_type?: string;
+  price_per_unit?: number;
+  unit_type?: string;
 }
 
 interface Category {
@@ -44,7 +48,23 @@ const AdminProducts = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    sku: string;
+    barcode: string;
+    price: number;
+    cost: number;
+    tax_rate: number;
+    stock_qty: number;
+    category_id: string;
+    is_active: boolean;
+    image_url: string;
+    estimated_prep_minutes: number;
+    kitchen_station: 'grill' | 'fryer' | 'salad' | 'dessert' | 'bar' | 'general';
+    pricing_type: 'fixed' | 'weight_based';
+    price_per_unit: number;
+    unit_type: string;
+  }>({
     name: '',
     sku: '',
     barcode: '',
@@ -55,7 +75,11 @@ const AdminProducts = () => {
     category_id: '',
     is_active: true,
     image_url: '',
-    estimated_prep_minutes: 10
+    estimated_prep_minutes: 10,
+    kitchen_station: 'general',
+    pricing_type: 'fixed',
+    price_per_unit: 0,
+    unit_type: 'kg'
   });
 
   if (!user) return <Navigate to="/auth" />;
@@ -193,7 +217,11 @@ const AdminProducts = () => {
       category_id: product.category_id || '',
       is_active: product.is_active,
       image_url: product.image_url || '',
-      estimated_prep_minutes: product.estimated_prep_minutes || 10
+      estimated_prep_minutes: product.estimated_prep_minutes || 10,
+      kitchen_station: (product.kitchen_station || 'general') as 'grill' | 'fryer' | 'salad' | 'dessert' | 'bar' | 'general',
+      pricing_type: (product.pricing_type || 'fixed') as 'fixed' | 'weight_based',
+      price_per_unit: product.price_per_unit || 0,
+      unit_type: product.unit_type || 'kg'
     });
     setImagePreview(product.image_url || null);
     setImageFile(null);
@@ -212,7 +240,11 @@ const AdminProducts = () => {
       category_id: '',
       is_active: true,
       image_url: '',
-      estimated_prep_minutes: 10
+      estimated_prep_minutes: 10,
+      kitchen_station: 'general',
+      pricing_type: 'fixed',
+      price_per_unit: 0,
+      unit_type: 'kg'
     });
     setImageFile(null);
     setImagePreview(null);
@@ -384,6 +416,79 @@ const AdminProducts = () => {
                     />
                     <p className="text-xs text-muted-foreground">Estimated kitchen prep time</p>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="kitchen_station">Kitchen Station</Label>
+                    <Select
+                      value={formData.kitchen_station}
+                      onValueChange={(value: 'grill' | 'fryer' | 'salad' | 'dessert' | 'bar' | 'general') => 
+                        setFormData({ ...formData, kitchen_station: value })
+                      }
+                    >
+                      <SelectTrigger id="kitchen_station">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="grill">Grill</SelectItem>
+                        <SelectItem value="fryer">Fryer</SelectItem>
+                        <SelectItem value="salad">Salad</SelectItem>
+                        <SelectItem value="dessert">Dessert</SelectItem>
+                        <SelectItem value="bar">Bar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pricing_type">Pricing Type</Label>
+                    <Select
+                      value={formData.pricing_type}
+                      onValueChange={(value: 'fixed' | 'weight_based') => 
+                        setFormData({ ...formData, pricing_type: value })
+                      }
+                    >
+                      <SelectTrigger id="pricing_type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fixed">Fixed Price</SelectItem>
+                        <SelectItem value="weight_based">Weight-Based</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.pricing_type === 'weight_based' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="price_per_unit">Price per Unit</Label>
+                        <Input
+                          id="price_per_unit"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.price_per_unit}
+                          onChange={(e) => setFormData({ ...formData, price_per_unit: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="unit_type">Unit Type</Label>
+                        <Select
+                          value={formData.unit_type}
+                          onValueChange={(value) => setFormData({ ...formData, unit_type: value })}
+                        >
+                          <SelectTrigger id="unit_type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="kg">Kilogram (kg)</SelectItem>
+                            <SelectItem value="g">Gram (g)</SelectItem>
+                            <SelectItem value="lb">Pound (lb)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <input
