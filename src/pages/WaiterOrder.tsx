@@ -9,10 +9,12 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Minus, Trash2, Send, Search, Settings } from 'lucide-react';
+import { Plus, Minus, Trash2, Send, Search, Settings, ArrowLeft, ShoppingCart, Filter } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import ModifierSelector, { SelectedModifier } from '@/components/ModifierSelector';
 import ComboSelector, { ComboSelection } from '@/components/ComboSelector';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Product {
   id: string;
@@ -21,6 +23,12 @@ interface Product {
   cost: number;
   tax_rate: number;
   kitchen_station?: string;
+  category_id?: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 interface OrderItem {
@@ -60,13 +68,16 @@ const WaiterOrder = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [modifierDialogOpen, setModifierDialogOpen] = useState(false);
   const [comboDialogOpen, setComboDialogOpen] = useState(false);
   const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<Product | null>(null);
   const [hasModifiers, setHasModifiers] = useState<Set<string>>(new Set());
   const [hasCombos, setHasCombos] = useState<Set<string>>(new Set());
+  const [showCart, setShowCart] = useState(false);
 
   if (!user) return <Navigate to="/auth" />;
   const hasAccess = profile?.roles?.some(r => ['waiter', 'admin'].includes(r));
@@ -75,6 +86,7 @@ const WaiterOrder = () => {
   useEffect(() => {
     loadOrder();
     loadProducts();
+    loadCategories();
     loadProductFeatures();
   }, [orderId]);
 
@@ -158,6 +170,20 @@ const WaiterOrder = () => {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  };
+
   const openCustomization = (product: Product) => {
     setSelectedProductForCustomization(product);
     
@@ -191,6 +217,7 @@ const WaiterOrder = () => {
     
     setOrderItems([...orderItems, newItem]);
     toast.success(`Added ${product.name}`);
+    setShowCart(true);
   };
 
   const handleModifierConfirm = (modifiers: SelectedModifier[], totalAdjustment: number) => {
@@ -221,6 +248,7 @@ const WaiterOrder = () => {
 
   const removeItem = (index: number) => {
     setOrderItems(orderItems.filter((_, i) => i !== index));
+    if (orderItems.length === 1) setShowCart(false);
   };
 
   const updateItemInstructions = (index: number, instructions: string) => {
@@ -236,8 +264,7 @@ const WaiterOrder = () => {
     }
 
     try {
-      // Insert order items
-      const insertedItems = await Promise.all(
+      await Promise.all(
         orderItems.map(async (item) => {
           const { data: insertedItem, error: itemError } = await supabase
             .from('order_items')
@@ -260,7 +287,6 @@ const WaiterOrder = () => {
 
           if (itemError) throw itemError;
 
-          // Insert modifiers
           if (item.modifiers && item.modifiers.length > 0) {
             const { error: modError } = await supabase
               .from('order_item_modifiers')
@@ -273,7 +299,6 @@ const WaiterOrder = () => {
             if (modError) throw modError;
           }
 
-          // Insert combo selections
           if (item.combo_selections && item.combo_selections.length > 0) {
             const { error: comboError } = await supabase
               .from('order_item_combo_selections')
@@ -291,10 +316,9 @@ const WaiterOrder = () => {
         })
       );
 
-      // Update order status
       const { error: orderError } = await supabase
         .from('orders')
-        .update({ status: 'preparing' })
+        .update({ status: 'confirmed' })
         .eq('id', orderId);
 
       if (orderError) throw orderError;
@@ -307,9 +331,11 @@ const WaiterOrder = () => {
     }
   };
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const calculateTotal = () => {
     return orderItems.reduce((sum, item) => sum + item.line_total, 0);
@@ -326,11 +352,32 @@ const WaiterOrder = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader>
-        <div className="flex items-center justify-center gap-2">
-          <h1 className="text-xl font-bold">
-            Order - Table {order?.restaurant_tables?.table_number}
-          </h1>
-          <Badge variant="secondary">{order?.status}</Badge>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/waiter')}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold">
+                Table {order?.restaurant_tables?.table_number}
+              </h1>
+              <p className="text-xs text-muted-foreground">{order?.order_number}</p>
+            </div>
+            <Badge variant="secondary">{order?.status}</Badge>
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            className="relative"
+            onClick={() => setShowCart(!showCart)}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            {orderItems.length > 0 && (
+              <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">
+                {orderItems.length}
+              </Badge>
+            )}
+          </Button>
         </div>
       </AppHeader>
 
@@ -357,36 +404,59 @@ const WaiterOrder = () => {
         </>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-        {/* Products Section */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search menu items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                />
+      <div className="p-4">
+        <div className={`grid ${showCart ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+          {/* Products Section */}
+          <Card className="flex flex-col h-[calc(100vh-12rem)]">
+            <CardHeader className="pb-3">
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search menu..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <div className="flex gap-2">
+                    <Button
+                      variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedCategory('all')}
+                    >
+                      All
+                    </Button>
+                    {categories.map(cat => (
+                      <Button
+                        key={cat.id}
+                        variant={selectedCategory === cat.id ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedCategory(cat.id)}
+                      >
+                        {cat.name}
+                      </Button>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-y-auto">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {filteredProducts.map(product => (
                   <Button
                     key={product.id}
                     variant="outline"
-                    className="h-auto flex-col items-start p-4 hover:bg-accent relative"
+                    className="h-auto flex-col items-start p-4 hover:bg-accent hover:scale-105 transition-transform relative"
                     onClick={() => openCustomization(product)}
                   >
                     {(hasModifiers.has(product.id) || hasCombos.has(product.id)) && (
-                      <Badge variant="secondary" className="absolute top-2 right-2">
+                      <Badge variant="secondary" className="absolute top-2 right-2 h-6 w-6 p-0 flex items-center justify-center">
                         <Settings className="h-3 w-3" />
                       </Badge>
                     )}
-                    <span className="font-semibold text-sm">{product.name}</span>
+                    <span className="font-semibold text-sm line-clamp-2">{product.name}</span>
                     <span className="text-lg font-bold text-primary mt-2">
                       R{product.price.toFixed(2)}
                     </span>
@@ -395,110 +465,131 @@ const WaiterOrder = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Order Items Section */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Items</CardTitle>
-              <CardDescription>{orderItems.length} items</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {orderItems.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No items added yet
-                </p>
-              ) : (
-                <>
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                    {orderItems.map((item, index) => (
-                      <div key={index} className="space-y-2 p-3 border rounded-lg">
-                        <div className="flex items-start gap-2">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{item.product_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              R{item.price_at_order.toFixed(2)} each
-                            </p>
-                            {item.modifiers && item.modifiers.length > 0 && (
-                              <div className="mt-1 space-y-0.5">
-                                {item.modifiers.map((mod, i) => (
-                                  <p key={i} className="text-xs text-muted-foreground">
-                                    + {mod.modifier_name}
-                                    {mod.price_adjustment !== 0 && ` (R${mod.price_adjustment.toFixed(2)})`}
-                                  </p>
-                                ))}
-                              </div>
-                            )}
-                            {item.combo_selections && item.combo_selections.length > 0 && (
-                              <div className="mt-1 space-y-0.5">
-                                <p className="text-xs font-semibold text-primary">Combo:</p>
-                                {item.combo_selections.map((sel, i) => (
-                                  <p key={i} className="text-xs text-muted-foreground">
-                                    • {sel.selected_product_name} ×{sel.qty}
-                                  </p>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => updateItemQty(index, item.qty - 1)}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center font-medium">{item.qty}</span>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => updateItemQty(index, item.qty + 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-sm">R{item.line_total.toFixed(2)}</p>
-                          </div>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6 text-destructive"
-                            onClick={() => removeItem(index)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <Textarea
-                          placeholder="Special instructions..."
-                          value={item.special_instructions || ''}
-                          onChange={(e) => updateItemInstructions(index, e.target.value)}
-                          className="text-xs min-h-[60px]"
-                        />
-                      </div>
-                    ))}
+          {/* Cart Section */}
+          {showCart && (
+            <Card className="flex flex-col h-[calc(100vh-12rem)]">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Order Items</CardTitle>
+                    <CardDescription>{orderItems.length} items</CardDescription>
                   </div>
-
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCart(false)}
+                    className="lg:hidden"
+                  >
+                    Hide
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto space-y-3">
+                {orderItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                    <ShoppingCart className="h-16 w-16 text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground">No items added yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Select items from the menu to get started
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {orderItems.map((item, index) => (
+                      <Card key={index} className="border-l-4 border-l-primary">
+                        <CardContent className="p-3 space-y-2">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm line-clamp-1">{item.product_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                R{item.price_at_order.toFixed(2)} each
+                              </p>
+                              {item.modifiers && item.modifiers.length > 0 && (
+                                <div className="mt-1 space-y-0.5">
+                                  {item.modifiers.map((mod, i) => (
+                                    <p key={i} className="text-xs text-muted-foreground">
+                                      + {mod.modifier_name}
+                                      {mod.price_adjustment !== 0 && ` (+R${mod.price_adjustment.toFixed(2)})`}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                              {item.combo_selections && item.combo_selections.length > 0 && (
+                                <div className="mt-1 space-y-0.5">
+                                  <p className="text-xs font-semibold text-primary">Combo:</p>
+                                  {item.combo_selections.map((sel, i) => (
+                                    <p key={i} className="text-xs text-muted-foreground">
+                                      • {sel.selected_product_name} ×{sel.qty}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="flex items-center gap-1 bg-muted rounded-md">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7"
+                                  onClick={() => updateItemQty(index, item.qty - 1)}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="w-8 text-center font-medium text-sm">{item.qty}</span>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7"
+                                  onClick={() => updateItemQty(index, item.qty + 1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <p className="font-bold text-sm">R{item.line_total.toFixed(2)}</p>
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => removeItem(index)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <Textarea
+                            placeholder="Special instructions..."
+                            value={item.special_instructions || ''}
+                            onChange={(e) => updateItemInstructions(index, e.target.value)}
+                            className="text-xs min-h-[50px]"
+                          />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </>
+                )}
+              </CardContent>
+              {orderItems.length > 0 && (
+                <>
                   <Separator />
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total:</span>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex justify-between items-center text-lg font-bold">
+                      <span>Total</span>
                       <span className="text-primary">R{calculateTotal().toFixed(2)}</span>
                     </div>
-                  </div>
-
-                  <Button onClick={submitOrder} className="w-full" size="lg">
-                    <Send className="h-4 w-4 mr-2" />
-                    Send to Kitchen
-                  </Button>
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={submitOrder}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send to Kitchen
+                    </Button>
+                  </CardContent>
                 </>
               )}
-            </CardContent>
-          </Card>
+            </Card>
+          )}
         </div>
       </div>
     </div>
