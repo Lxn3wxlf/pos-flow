@@ -13,12 +13,15 @@ import AppHeader from '@/components/AppHeader';
 interface OrderItem {
   id: string;
   order_id: string;
+  product_id: string;
   product_name: string;
   qty: number;
   special_instructions?: string;
   status: string;
   kitchen_station: string;
   created_at: string;
+  started_at?: string;
+  completed_at?: string;
   modifiers?: Array<{
     modifier_name: string;
     price_adjustment: number;
@@ -33,6 +36,7 @@ interface OrderItem {
       table_number: string;
     };
   };
+  estimated_prep_minutes?: number;
 }
 
 const Kitchen = () => {
@@ -71,7 +75,8 @@ const Kitchen = () => {
           orders!inner(
             order_number,
             restaurant_tables(table_number)
-          )
+          ),
+          products!inner(estimated_prep_minutes)
         `)
         .in('status', ['pending', 'preparing'])
         .order('created_at', { ascending: true });
@@ -80,7 +85,7 @@ const Kitchen = () => {
       
       // Load modifiers and combo selections for each item
       const itemsWithDetails = await Promise.all(
-        (data || []).map(async (item) => {
+        (data || []).map(async (item: any) => {
           const [modifiersRes, comboRes] = await Promise.all([
             supabase.from('order_item_modifiers').select('modifier_name, price_adjustment').eq('order_item_id', item.id),
             supabase.from('order_item_combo_selections').select('selected_product_name, qty').eq('order_item_id', item.id),
@@ -90,6 +95,7 @@ const Kitchen = () => {
             ...item,
             modifiers: modifiersRes.data || [],
             combo_selections: comboRes.data || [],
+            estimated_prep_minutes: item.products?.estimated_prep_minutes || 10,
           };
         })
       );
@@ -137,6 +143,26 @@ const Kitchen = () => {
 
   const getStatusColor = (status: string) => {
     return status === 'pending' ? 'secondary' : 'default';
+  };
+
+  const getElapsedMinutes = (item: OrderItem) => {
+    const startTime = item.started_at ? new Date(item.started_at) : new Date(item.created_at);
+    const now = new Date();
+    return Math.floor((now.getTime() - startTime.getTime()) / 60000);
+  };
+
+  const isOverdue = (item: OrderItem) => {
+    if (item.status !== 'preparing') return false;
+    const elapsed = getElapsedMinutes(item);
+    return elapsed > (item.estimated_prep_minutes || 10);
+  };
+
+  const getTimerColor = (item: OrderItem) => {
+    const elapsed = getElapsedMinutes(item);
+    const estimated = item.estimated_prep_minutes || 10;
+    if (elapsed > estimated) return 'text-destructive';
+    if (elapsed > estimated * 0.8) return 'text-warning';
+    return 'text-muted-foreground';
   };
 
   const filteredItems = selectedStation === 'all' 
@@ -191,7 +217,7 @@ const Kitchen = () => {
                 {filteredItems.map(item => (
                   <Card 
                     key={item.id} 
-                    className={`${item.status === 'pending' ? 'border-primary' : ''}`}
+                    className={`${item.status === 'pending' ? 'border-primary' : ''} ${isOverdue(item) ? 'border-destructive border-2 animate-pulse' : ''}`}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
@@ -253,9 +279,25 @@ const Kitchen = () => {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {new Date(item.created_at).toLocaleTimeString()}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {new Date(item.created_at).toLocaleTimeString()}
+                        </div>
+                        
+                        {item.status === 'preparing' && (
+                          <div className={`flex items-center gap-2 text-sm font-bold ${getTimerColor(item)}`}>
+                            <Clock className="h-4 w-4" />
+                            {getElapsedMinutes(item)} / {item.estimated_prep_minutes || 10} min
+                            {isOverdue(item) && <span className="text-destructive">⚠️ OVERDUE</span>}
+                          </div>
+                        )}
+                        
+                        {item.status === 'pending' && (
+                          <div className="text-xs text-muted-foreground">
+                            Est. {item.estimated_prep_minutes || 10} minutes
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex gap-2 pt-2">

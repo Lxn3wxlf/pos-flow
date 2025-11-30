@@ -26,6 +26,7 @@ interface Product {
   category_id?: string;
   is_active: boolean;
   image_url?: string;
+  estimated_prep_minutes?: number;
 }
 
 interface Category {
@@ -53,7 +54,8 @@ const AdminProducts = () => {
     stock_qty: 0,
     category_id: '',
     is_active: true,
-    image_url: ''
+    image_url: '',
+    estimated_prep_minutes: 10
   });
 
   if (!user) return <Navigate to="/auth" />;
@@ -190,7 +192,8 @@ const AdminProducts = () => {
       stock_qty: product.stock_qty,
       category_id: product.category_id || '',
       is_active: product.is_active,
-      image_url: product.image_url || ''
+      image_url: product.image_url || '',
+      estimated_prep_minutes: product.estimated_prep_minutes || 10
     });
     setImagePreview(product.image_url || null);
     setImageFile(null);
@@ -208,7 +211,8 @@ const AdminProducts = () => {
       stock_qty: 0,
       category_id: '',
       is_active: true,
-      image_url: ''
+      image_url: '',
+      estimated_prep_minutes: 10
     });
     setImageFile(null);
     setImagePreview(null);
@@ -368,6 +372,17 @@ const AdminProducts = () => {
                       value={formData.stock_qty}
                       onChange={(e) => setFormData({ ...formData, stock_qty: parseInt(e.target.value) || 0 })}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="estimated_prep_minutes">Prep Time (minutes)</Label>
+                    <Input
+                      id="estimated_prep_minutes"
+                      type="number"
+                      min="1"
+                      value={formData.estimated_prep_minutes}
+                      onChange={(e) => setFormData({ ...formData, estimated_prep_minutes: parseInt(e.target.value) || 10 })}
+                    />
+                    <p className="text-xs text-muted-foreground">Estimated kitchen prep time</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
