@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import logo from '@/assets/casbah-logo.svg';
 
@@ -24,6 +24,7 @@ interface CartItem {
 const POS = () => {
   const { user, profile, signOut } = useAuth();
   const { isOnline, isSyncing, lastSync } = useSyncEngine(user?.id);
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
@@ -227,13 +228,18 @@ const POS = () => {
     <div className="min-h-screen bg-background">
       <AppHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/admin')}
+            className="flex items-center gap-4 h-auto px-2 py-1"
+            aria-label="Go to home"
+          >
             <img src={logo} alt="Casbah Logo" className="h-8 w-auto" />
-            <div>
+            <div className="text-left">
               <h1 className="text-xl font-bold">POS Register</h1>
               <p className="text-sm text-muted-foreground">{profile?.full_name}</p>
             </div>
-          </div>
+          </Button>
           <div className="flex items-center gap-2">
             <Badge variant={isOnline ? "default" : "destructive"} className="gap-1">
               {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
