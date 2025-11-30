@@ -48,10 +48,10 @@ export const useSyncEngine = (userId: string | undefined) => {
           // Get sale items
           const saleItems = await db.sale_items.where('sale_id').equals(sale.id).toArray();
 
-          // Insert sale to cloud
+          // Upsert sale to cloud (handles retries and duplicate prevention)
           const { data: cloudSale, error: saleError } = await supabase
             .from('sales')
-            .insert({
+            .upsert({
               id: sale.id,
               cashier_id: sale.cashier_id,
               subtotal: sale.subtotal,
@@ -62,16 +62,18 @@ export const useSyncEngine = (userId: string | undefined) => {
               notes: sale.notes,
               created_at: sale.created_at.toISOString(),
               synced_at: new Date().toISOString()
+            }, {
+              onConflict: 'id'
             })
             .select()
             .single();
 
           if (saleError) throw saleError;
 
-          // Insert sale items
+          // Upsert sale items (handles retries and duplicate prevention)
           const { error: itemsError } = await supabase
             .from('sale_items')
-            .insert(
+            .upsert(
               saleItems.map(item => ({
                 id: item.id,
                 sale_id: item.sale_id,
@@ -83,7 +85,10 @@ export const useSyncEngine = (userId: string | undefined) => {
                 cost_at_sale: item.cost_at_sale,
                 tax_rate: item.tax_rate,
                 line_total: item.line_total
-              }))
+              })),
+              {
+                onConflict: 'id'
+              }
             );
 
           if (itemsError) throw itemsError;
