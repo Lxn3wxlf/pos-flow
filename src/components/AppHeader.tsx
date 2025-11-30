@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin } from 'lucide-react';
+import logo from '@/assets/casbah-logo.svg';
 
 interface AppHeaderProps {
   children: React.ReactNode;
@@ -14,17 +15,26 @@ const AppHeader = ({ children }: AppHeaderProps) => {
   return (
     <div className="border-b bg-card">
       <div className="p-4 space-y-3">
-        {/* Logo - clickable home button */}
-        <div className="flex items-center justify-center">
+        {/* Logo and contact info */}
+        <div className="flex flex-col items-center gap-2">
           <Button
             variant="ghost"
-            size="icon"
             onClick={() => navigate('/admin')}
-            className="h-12 w-12"
+            className="h-16 px-4"
             aria-label="Go to home"
           >
-            <ShoppingCart className="h-8 w-8 text-primary" />
+            <img src={logo} alt="Casbah Logo" className="h-12 w-auto" />
           </Button>
+          <div className="flex flex-col items-center gap-1 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Phone className="h-3 w-3" />
+              <span>065 683 5702</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              <span>194 Marine Drive</span>
+            </div>
+          </div>
         </div>
 
         {/* Back button - shown on all pages except home */}
