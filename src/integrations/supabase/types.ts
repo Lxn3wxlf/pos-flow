@@ -539,6 +539,8 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           tax_rate: number
           updated_at: string
+          weight_amount: number | null
+          weight_unit: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -558,6 +560,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           tax_rate?: number
           updated_at?: string
+          weight_amount?: number | null
+          weight_unit?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -577,6 +581,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           tax_rate?: number
           updated_at?: string
+          weight_amount?: number | null
+          weight_unit?: string | null
         }
         Relationships: [
           {
@@ -667,6 +673,78 @@ export type Database = {
             columns: ["table_id"]
             isOneToOne: false
             referencedRelation: "restaurant_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          card_brand: string | null
+          card_last_four: string | null
+          created_at: string | null
+          currency: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          order_id: string | null
+          payment_method: string | null
+          payment_provider: string
+          processed_at: string | null
+          provider_transaction_id: string | null
+          sale_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          card_brand?: string | null
+          card_last_four?: string | null
+          created_at?: string | null
+          currency?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          payment_method?: string | null
+          payment_provider: string
+          processed_at?: string | null
+          provider_transaction_id?: string | null
+          sale_id?: string | null
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          card_brand?: string | null
+          card_last_four?: string | null
+          created_at?: string | null
+          currency?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          payment_method?: string | null
+          payment_provider?: string
+          processed_at?: string | null
+          provider_transaction_id?: string | null
+          sale_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
@@ -775,9 +853,12 @@ export type Database = {
           kitchen_station: Database["public"]["Enums"]["kitchen_station"] | null
           name: string
           price: number
+          price_per_unit: number | null
+          pricing_type: string | null
           sku: string
           stock_qty: number
           tax_rate: number
+          unit_type: string | null
           updated_at: string
         }
         Insert: {
@@ -795,9 +876,12 @@ export type Database = {
             | null
           name: string
           price: number
+          price_per_unit?: number | null
+          pricing_type?: string | null
           sku: string
           stock_qty?: number
           tax_rate?: number
+          unit_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -815,9 +899,12 @@ export type Database = {
             | null
           name?: string
           price?: number
+          price_per_unit?: number | null
+          pricing_type?: string | null
           sku?: string
           stock_qty?: number
           tax_rate?: number
+          unit_type?: string | null
           updated_at?: string
         }
         Relationships: [
