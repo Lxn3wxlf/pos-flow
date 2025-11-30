@@ -227,29 +227,27 @@ const POS = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader>
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/admin')}
-            className="flex items-center gap-4 h-auto px-2 py-1"
-            aria-label="Go to home"
-          >
-            <img src={logo} alt="Casbah Logo" className="h-8 w-auto" />
-            <div className="text-left">
-              <h1 className="text-xl font-bold">POS Register</h1>
-              <p className="text-sm text-muted-foreground">{profile?.full_name}</p>
-            </div>
-          </Button>
-          <div className="flex items-center gap-2">
-            <Badge variant={isOnline ? "default" : "destructive"} className="gap-1">
-              {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-              {isOnline ? 'Online' : 'Offline'}
-            </Badge>
-            {isSyncing && <Badge variant="secondary">Syncing...</Badge>}
-            <Button variant="ghost" size="icon" onClick={signOut}>
-              <LogOut className="h-4 w-4" />
-            </Button>
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/admin')}
+          className="flex items-center gap-3 h-auto px-2 py-1"
+          aria-label="Go to home"
+        >
+          <img src={logo} alt="Casbah Logo" className="h-8 w-auto" />
+          <div className="text-left">
+            <h1 className="text-xl font-bold">POS Register</h1>
+            <p className="text-sm text-muted-foreground">{profile?.full_name}</p>
           </div>
+        </Button>
+        <div className="flex items-center gap-2">
+          <Badge variant={isOnline ? "default" : "destructive"} className="gap-1">
+            {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+            {isOnline ? 'Online' : 'Offline'}
+          </Badge>
+          {isSyncing && <Badge variant="secondary">Syncing...</Badge>}
+          <Button variant="ghost" size="icon" onClick={signOut}>
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </AppHeader>
 

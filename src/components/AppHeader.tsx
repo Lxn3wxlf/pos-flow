@@ -13,13 +13,14 @@ const AppHeader = ({ children }: AppHeaderProps) => {
 
   return (
     <div className="border-b bg-card">
-      <div className="p-4 space-y-3">
-        {/* Page-specific content (includes logo, title, and actions) */}
-        {children}
+      <div className="p-4">
+        {/* Single row layout */}
+        <div className="flex items-center justify-between gap-4">
+          {/* Page-specific content (logo, title) */}
+          {children}
 
-        {/* Back button - shown on all pages except home */}
-        {!isHomePage && (
-          <div className="flex justify-center">
+          {/* Back button - shown on all pages except home */}
+          {!isHomePage && (
             <Button
               variant="outline"
               size="sm"
@@ -29,11 +30,12 @@ const AppHeader = ({ children }: AppHeaderProps) => {
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
-          </div>
-        )}
+          )}
 
-        {/* Contact info - Right side */}
-        <div className="flex justify-end">
+          {/* Spacer to push content to the sides */}
+          <div className="flex-1" />
+
+          {/* Contact info */}
           <div className="flex flex-col items-end gap-0.5 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Phone className="h-3 w-3" />
