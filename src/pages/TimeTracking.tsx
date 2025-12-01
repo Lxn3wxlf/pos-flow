@@ -36,8 +36,13 @@ export default function TimeTracking() {
   }, [user]);
 
   const checkBiometricAvailability = async () => {
-    const available = await biometricAuth.isAvailable();
-    setBiometricAvailable(available);
+    try {
+      const available = await biometricAuth.isAvailable();
+      setBiometricAvailable(available);
+    } catch (error) {
+      console.error('Failed to check biometric availability:', error);
+      setBiometricAvailable(false);
+    }
   };
 
   const fetchActiveEntry = async () => {
