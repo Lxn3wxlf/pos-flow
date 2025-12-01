@@ -1,12 +1,11 @@
-import { Capacitor } from '@capacitor/core';
-
 interface BiometricAuthResult {
   success: boolean;
   error?: string;
 }
 
 /**
- * Biometric authentication service that works on both web and mobile
+ * Biometric authentication service for web browsers using WebAuthn
+ * Mobile native support can be added later via Capacitor plugins
  */
 export class BiometricAuth {
   private static instance: BiometricAuth;
@@ -21,80 +20,33 @@ export class BiometricAuth {
   }
 
   /**
-   * Check if biometric authentication is available
+   * Check if biometric authentication is available (Web only for now)
    */
   async isAvailable(): Promise<boolean> {
-    if (Capacitor.isNativePlatform()) {
-      return this.isNativeBiometricAvailable();
-    } else {
-      return this.isWebAuthNAvailable();
-    }
-  }
-
-  /**
-   * Authenticate using biometrics
-   */
-  async authenticate(reason: string = 'Verify your identity'): Promise<BiometricAuthResult> {
     try {
-      if (Capacitor.isNativePlatform()) {
-        return await this.authenticateNative(reason);
-      } else {
-        return await this.authenticateWebAuthN(reason);
-      }
+      // Check for WebAuthn support
+      return !!(
+        window.PublicKeyCredential &&
+        navigator.credentials &&
+        typeof navigator.credentials.create === 'function'
+      );
     } catch (error) {
-      console.error('Biometric authentication error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Authentication failed'
-      };
-    }
-  }
-
-  /**
-   * Check if native biometric is available (iOS/Android)
-   */
-  private async isNativeBiometricAvailable(): Promise<boolean> {
-    try {
-      // Dynamically import the plugin only when on native platform
-      const { NativeBiometric } = await import('capacitor-native-biometric');
-      const result = await NativeBiometric.isAvailable();
-      return result.isAvailable;
-    } catch (error) {
-      console.error('Native biometric check failed:', error);
+      console.error('Biometric availability check failed:', error);
       return false;
     }
   }
 
   /**
-   * Check if WebAuthn is available (Web browsers)
+   * Authenticate using biometrics (WebAuthn for web)
    */
-  private async isWebAuthNAvailable(): Promise<boolean> {
-    return !!(
-      window.PublicKeyCredential &&
-      navigator.credentials &&
-      typeof navigator.credentials.create === 'function'
-    );
-  }
-
-  /**
-   * Authenticate using native biometric (iOS/Android)
-   */
-  private async authenticateNative(reason: string): Promise<BiometricAuthResult> {
+  async authenticate(reason: string = 'Verify your identity'): Promise<BiometricAuthResult> {
     try {
-      const { NativeBiometric } = await import('capacitor-native-biometric');
-      
-      await NativeBiometric.verifyIdentity({
-        reason,
-        title: 'Biometric Authentication',
-        subtitle: 'Please verify your identity',
-        description: reason,
-      });
-
-      return { success: true };
+      return await this.authenticateWebAuthN(reason);
     } catch (error) {
+      console.error('Biometric authentication error:', error);
       return {
         success: false,
-        error: 'Biometric authentication failed or was cancelled'
+        error: error instanceof Error ? error.message : 'Authentication failed'
       };
     }
   }
