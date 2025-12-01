@@ -16,6 +16,7 @@ import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package } from 'luc
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
+import ModifierSelector, { SelectedModifier } from '@/components/ModifierSelector';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/casbah-logo.svg';
 
@@ -24,6 +25,8 @@ interface CartItem {
   qty: number;
   weight_amount?: number;
   weight_unit?: string;
+  modifiers?: SelectedModifier[];
+  price_adjustment?: number;
 }
 
 const POS = () => {
@@ -38,6 +41,9 @@ const POS = () => {
   const [isEODOpen, setIsEODOpen] = useState(false);
   const [hasPendingEOD, setHasPendingEOD] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [modifierDialogOpen, setModifierDialogOpen] = useState(false);
+  const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<LocalProduct | null>(null);
+  const [hasModifiers, setHasModifiers] = useState<Set<string>>(new Set());
 
   // Check for pending EOD on mount and periodically
   useEffect(() => {
@@ -45,6 +51,25 @@ const POS = () => {
     const interval = setInterval(checkPendingEOD, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
   }, [user]);
+
+  // Load which products have modifiers
+  useEffect(() => {
+    loadProductFeatures();
+  }, []);
+
+  const loadProductFeatures = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('product_modifiers')
+        .select('product_id');
+      
+      if (!error && data) {
+        setHasModifiers(new Set(data.map(pm => pm.product_id)));
+      }
+    } catch (error) {
+      console.error('Error loading product features:', error);
+    }
+  };
 
   const checkPendingEOD = async () => {
     if (!user) return;
@@ -88,23 +113,52 @@ const POS = () => {
     p.barcode?.includes(searchQuery)
   ).slice(0, 20);
 
-  const addToCart = (product: LocalProduct) => {
+  const openCustomization = (product: LocalProduct) => {
     if (isLocked) {
       toast.error("POS is locked pending EOD approval");
       return;
     }
 
-    const existing = cart.find(item => item.product.id === product.id);
+    setSelectedProductForCustomization(product);
+    
+    if (hasModifiers.has(product.id)) {
+      setModifierDialogOpen(true);
+    } else {
+      addItemDirectly(product);
+    }
+  };
+
+  const addItemDirectly = (product: LocalProduct, modifiers?: SelectedModifier[]) => {
+    const priceAdjustment = modifiers?.reduce((sum, m) => sum + m.price_adjustment, 0) || 0;
+    
+    const existing = cart.find(item => 
+      item.product.id === product.id && 
+      JSON.stringify(item.modifiers || []) === JSON.stringify(modifiers || [])
+    );
+    
     if (existing) {
       setCart(cart.map(item =>
-        item.product.id === product.id
+        item.product.id === product.id && 
+        JSON.stringify(item.modifiers || []) === JSON.stringify(modifiers || [])
           ? { ...item, qty: item.qty + 1 }
           : item
       ));
     } else {
-      setCart([...cart, { product, qty: 1 }]);
+      setCart([...cart, { 
+        product, 
+        qty: 1,
+        modifiers: modifiers || [],
+        price_adjustment: priceAdjustment
+      }]);
     }
     toast.success(`Added ${product.name} to cart`);
+  };
+
+  const handleModifierConfirm = (modifiers: SelectedModifier[], totalAdjustment: number) => {
+    if (selectedProductForCustomization) {
+      addItemDirectly(selectedProductForCustomization, modifiers);
+    }
+    setSelectedProductForCustomization(null);
   };
 
   const updateQty = (productId: string, newQty: number) => {
@@ -122,10 +176,11 @@ const POS = () => {
   };
 
   const getItemPrice = (item: CartItem) => {
+    let basePrice = item.product.price;
     if (item.product.pricing_type === 'weight_based' && item.weight_amount && item.product.price_per_unit) {
-      return item.product.price_per_unit * item.weight_amount;
+      basePrice = item.product.price_per_unit * item.weight_amount;
     }
-    return item.product.price;
+    return basePrice + (item.price_adjustment || 0);
   };
 
   const calculateTotals = () => {
@@ -407,19 +462,24 @@ const POS = () => {
                         if (product.pricing_type === 'weight_based') {
                           const weight = prompt('Enter weight amount (e.g., 0.3, 0.5, 1):');
                           if (weight && !isNaN(parseFloat(weight))) {
-                            addToCart(product);
-                            const lastItem = cart[cart.length - 1];
-                            if (!lastItem || lastItem.product.id !== product.id) {
+                            setSelectedProductForCustomization(product);
+                            if (hasModifiers.has(product.id)) {
+                              setModifierDialogOpen(true);
+                              // Store weight info temporarily to add after modifier selection
+                              (product as any).tempWeight = parseFloat(weight);
+                              (product as any).tempUnit = product.unit_type || 'kg';
+                            } else {
                               setCart([...cart, { 
                                 product, 
                                 qty: 1, 
                                 weight_amount: parseFloat(weight),
                                 weight_unit: product.unit_type || 'kg'
                               }]);
+                              toast.success(`Added ${product.name} to cart`);
                             }
                           }
                         } else {
-                          addToCart(product);
+                          openCustomization(product);
                         }
                       }}
                       disabled={isLocked}
@@ -474,11 +534,16 @@ const POS = () => {
                       return (
                         <div key={item.product.id} className="flex items-center gap-2 p-2 border rounded">
                           <div className="flex-1">
-                            <p className="font-medium text-sm">
-                              {item.product.name}
-                              {item.weight_amount && ` (${item.weight_amount}${item.weight_unit})`}
-                            </p>
-                            <p className="text-xs text-muted-foreground">R{itemPrice.toFixed(2)} each</p>
+                             <p className="font-medium text-sm">
+                               {item.product.name}
+                               {item.weight_amount && ` (${item.weight_amount}${item.weight_unit})`}
+                             </p>
+                             {item.modifiers && item.modifiers.length > 0 && (
+                               <p className="text-xs text-muted-foreground">
+                                 {item.modifiers.map(m => m.modifier_name).join(', ')}
+                               </p>
+                             )}
+                             <p className="text-xs text-muted-foreground">R{itemPrice.toFixed(2)} each</p>
                           </div>
                           <div className="flex items-center gap-1">
                             <Button
@@ -583,6 +648,19 @@ const POS = () => {
         onOpenChange={setIsEODOpen}
         onSubmitted={checkPendingEOD}
       />
+
+      {/* Modifier Selection Dialog */}
+      {selectedProductForCustomization && (
+        <ModifierSelector
+          productId={selectedProductForCustomization.id}
+          open={modifierDialogOpen}
+          onClose={() => {
+            setModifierDialogOpen(false);
+            setSelectedProductForCustomization(null);
+          }}
+          onConfirm={handleModifierConfirm}
+        />
+      )}
     </div>
   );
 };
