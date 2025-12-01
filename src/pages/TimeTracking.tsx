@@ -4,9 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Play, Square, Coffee } from "lucide-react";
+import { Clock, Play, Square, Coffee, Fingerprint } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { biometricAuth } from "@/lib/biometricAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TimeEntry {
   id: string;
@@ -24,11 +26,19 @@ export default function TimeTracking() {
   const [recentEntries, setRecentEntries] = useState<TimeEntry[]>([]);
   const [onBreak, setOnBreak] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [authenticating, setAuthenticating] = useState(false);
 
   useEffect(() => {
     fetchActiveEntry();
     fetchRecentEntries();
+    checkBiometricAvailability();
   }, [user]);
+
+  const checkBiometricAvailability = async () => {
+    const available = await biometricAuth.isAvailable();
+    setBiometricAvailable(available);
+  };
 
   const fetchActiveEntry = async () => {
     if (!user) return;
@@ -76,6 +86,18 @@ export default function TimeTracking() {
   const handleClockIn = async () => {
     if (!user) return;
 
+    // Verify biometric if available
+    if (biometricAvailable) {
+      setAuthenticating(true);
+      const result = await biometricAuth.authenticate('Verify your identity to clock in');
+      setAuthenticating(false);
+
+      if (!result.success) {
+        toast.error(result.error || 'Biometric verification failed');
+        return;
+      }
+    }
+
     try {
       const { data, error } = await supabase
         .from("time_tracking")
@@ -98,6 +120,18 @@ export default function TimeTracking() {
 
   const handleClockOut = async () => {
     if (!activeEntry) return;
+
+    // Verify biometric if available
+    if (biometricAvailable) {
+      setAuthenticating(true);
+      const result = await biometricAuth.authenticate('Verify your identity to clock out');
+      setAuthenticating(false);
+
+      if (!result.success) {
+        toast.error(result.error || 'Biometric verification failed');
+        return;
+      }
+    }
 
     try {
       const { error } = await supabase
@@ -172,6 +206,14 @@ export default function TimeTracking() {
         <h1 className="text-2xl font-bold">Time Tracking</h1>
       </AppHeader>
       <div className="container mx-auto p-6">
+        {biometricAvailable && (
+          <Alert className="mb-6 border-primary/20 bg-primary/5">
+            <Fingerprint className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-sm">
+              Biometric authentication is enabled for secure clock in/out
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="mb-6">
           <CardHeader>
@@ -215,9 +257,18 @@ export default function TimeTracking() {
             ) : (
               <div className="text-center">
                 <p className="text-muted-foreground mb-4">Not clocked in</p>
-                <Button onClick={handleClockIn} size="lg">
-                  <Play className="mr-2 h-4 w-4" />
-                  Clock In
+                <Button 
+                  onClick={handleClockIn} 
+                  size="lg" 
+                  disabled={authenticating}
+                  className="gap-2"
+                >
+                  {biometricAvailable ? (
+                    <Fingerprint className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  {authenticating ? 'Verifying...' : 'Clock In'}
                 </Button>
               </div>
             )}
