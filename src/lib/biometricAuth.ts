@@ -19,17 +19,28 @@ export class BiometricAuth {
     return BiometricAuth.instance;
   }
 
-  /**
+/**
    * Check if biometric authentication is available (Web only for now)
+   * Requires HTTPS and platform authenticator support
    */
   async isAvailable(): Promise<boolean> {
     try {
       // Check for WebAuthn support
-      return !!(
-        window.PublicKeyCredential &&
-        navigator.credentials &&
-        typeof navigator.credentials.create === 'function'
-      );
+      if (!window.PublicKeyCredential || !navigator.credentials) {
+        console.log('WebAuthn not supported in this browser');
+        return false;
+      }
+
+      // Check if running on HTTPS (required for WebAuthn)
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        console.log('WebAuthn requires HTTPS');
+        return false;
+      }
+
+      // Check for platform authenticator (fingerprint/face)
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      console.log('Platform authenticator available:', available);
+      return available;
     } catch (error) {
       console.error('Biometric availability check failed:', error);
       return false;
