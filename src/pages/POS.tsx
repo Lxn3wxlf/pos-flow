@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncEngine } from '@/hooks/useSyncEngine';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package, Coffee, UtensilsCrossed, IceCream } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
@@ -29,6 +29,73 @@ interface CartItem {
   price_adjustment?: number;
 }
 
+// Category classifications
+const HOT_DRINK_CATEGORIES = ['Coffee', 'Tea'];
+const COLD_DRINK_CATEGORIES = ['Cold Coffee', 'Freezos', 'Milk Shake', 'Assorted Drinks', 'Beverages', 'Drinks'];
+
+// Product Button Component
+interface ProductButtonProps {
+  product: LocalProduct;
+  onAdd: (product: LocalProduct) => void;
+  hasModifiers: Set<string>;
+  isLocked: boolean;
+  cart: CartItem[];
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+}
+
+const ProductButton = ({ product, onAdd, hasModifiers, isLocked, cart, setCart }: ProductButtonProps) => {
+  const handleClick = () => {
+    if (product.pricing_type === 'weight_based') {
+      const weight = prompt('Enter weight amount (e.g., 0.3, 0.5, 1):');
+      if (weight && !isNaN(parseFloat(weight))) {
+        if (hasModifiers.has(product.id)) {
+          onAdd(product);
+        } else {
+          setCart([...cart, { 
+            product, 
+            qty: 1, 
+            weight_amount: parseFloat(weight),
+            weight_unit: product.unit_type || 'kg'
+          }]);
+          toast.success(`Added ${product.name} to cart`);
+        }
+      }
+    } else {
+      onAdd(product);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      className="h-auto flex-col items-start p-3 hover:bg-accent"
+      onClick={handleClick}
+      disabled={isLocked}
+    >
+      <div className="w-full aspect-square mb-2 rounded-md bg-muted flex items-center justify-center overflow-hidden">
+        {product.image_url ? (
+          <img 
+            src={product.image_url} 
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Package className="h-8 w-8 text-muted-foreground/40" />
+        )}
+      </div>
+      <span className="font-semibold text-xs leading-tight line-clamp-2">{product.name}</span>
+      {product.pricing_type === 'weight_based' ? (
+        <span className="text-sm font-bold text-primary mt-1">
+          R{product.price_per_unit?.toFixed(2)}/{product.unit_type || 'kg'}
+        </span>
+      ) : (
+        <span className="text-sm font-bold text-primary mt-1">R{product.price.toFixed(2)}</span>
+      )}
+      <Badge variant="secondary" className="mt-1 text-[10px]">Stock: {product.stock_qty}</Badge>
+    </Button>
+  );
+};
+
 const POS = () => {
   const { user, profile, signOut } = useAuth();
   const { isOnline, isSyncing, lastSync } = useSyncEngine(user?.id);
@@ -44,18 +111,32 @@ const POS = () => {
   const [modifierDialogOpen, setModifierDialogOpen] = useState(false);
   const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<LocalProduct | null>(null);
   const [hasModifiers, setHasModifiers] = useState<Set<string>>(new Set());
+  const [activeSection, setActiveSection] = useState<'food' | 'hot' | 'cold'>('food');
+  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
 
   // Check for pending EOD on mount and periodically
   useEffect(() => {
     checkPendingEOD();
-    const interval = setInterval(checkPendingEOD, 30000); // Check every 30 seconds
+    const interval = setInterval(checkPendingEOD, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
-  // Load which products have modifiers
+  // Load which products have modifiers and categories
   useEffect(() => {
     loadProductFeatures();
+    loadCategories();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase.from('categories').select('id, name');
+      if (!error && data) {
+        setCategories(data);
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  };
 
   const loadProductFeatures = async () => {
     try {
@@ -107,11 +188,45 @@ const POS = () => {
   const hasAccess = profile?.roles?.some(r => ['cashier', 'waiter', 'admin'].includes(r));
   if (!hasAccess) return <Navigate to="/auth" />;
 
-  const filteredProducts = products?.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.barcode?.includes(searchQuery)
-  ).slice(0, 20);
+  // Categorize products
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return 'Uncategorized';
+    const cat = categories.find(c => c.id === categoryId);
+    return cat?.name || 'Uncategorized';
+  };
+
+  const categorizedProducts = useMemo(() => {
+    if (!products) return { food: {}, hotDrinks: {}, coldDrinks: {} };
+    
+    const food: Record<string, LocalProduct[]> = {};
+    const hotDrinks: Record<string, LocalProduct[]> = {};
+    const coldDrinks: Record<string, LocalProduct[]> = {};
+
+    products.forEach(product => {
+      const categoryName = getCategoryName(product.category_id);
+      
+      // Filter by search query
+      if (searchQuery) {
+        const matches = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.barcode?.includes(searchQuery);
+        if (!matches) return;
+      }
+
+      if (HOT_DRINK_CATEGORIES.includes(categoryName)) {
+        if (!hotDrinks[categoryName]) hotDrinks[categoryName] = [];
+        hotDrinks[categoryName].push(product);
+      } else if (COLD_DRINK_CATEGORIES.includes(categoryName)) {
+        if (!coldDrinks[categoryName]) coldDrinks[categoryName] = [];
+        coldDrinks[categoryName].push(product);
+      } else {
+        if (!food[categoryName]) food[categoryName] = [];
+        food[categoryName].push(product);
+      }
+    });
+
+    return { food, hotDrinks, coldDrinks };
+  }, [products, categories, searchQuery]);
 
   const openCustomization = (product: LocalProduct) => {
     if (isLocked) {
@@ -317,75 +432,97 @@ const POS = () => {
   };
 
   const printReceipt = (saleId: string, items: CartItem[], totals: any) => {
-    const receiptWindow = window.open('', '_blank');
-    if (!receiptWindow) return;
-
-    const receiptHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Receipt - ${saleId}</title>
-        <style>
-          body { font-family: monospace; max-width: 300px; margin: 20px auto; }
-          .center { text-align: center; }
-          .line { border-bottom: 1px dashed #000; margin: 10px 0; }
-          .item { display: flex; justify-content: space-between; margin: 5px 0; }
-          .totals { margin-top: 10px; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="center">
-          <h2>POS System</h2>
-          <p>Receipt #${saleId.split('-')[0]}</p>
-          <p>${new Date().toLocaleString()}</p>
+    const receiptContent = `
+      <div style="font-family: monospace; max-width: 300px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center;">
+          <h2 style="margin: 0;">CASBAH</h2>
+          <p style="margin: 5px 0;">194 Marine Drive</p>
+          <p style="margin: 5px 0;">065 683 5702</p>
+          <p style="margin: 10px 0;">Receipt #${saleId.slice(0, 8).toUpperCase()}</p>
+          <p style="margin: 5px 0;">${new Date().toLocaleString()}</p>
         </div>
-        <div class="line"></div>
+        <hr style="border: 1px dashed #000; margin: 10px 0;" />
         ${items.map(item => {
           const itemPrice = getItemPrice(item);
           const weightInfo = item.weight_amount ? ` (${item.weight_amount}${item.weight_unit})` : '';
+          const modifierInfo = item.modifiers?.length ? `<br><small style="color: #666;">${item.modifiers.map(m => m.modifier_name).join(', ')}</small>` : '';
           return `
-            <div class="item">
-              <span>${item.product.name}${weightInfo} x${item.qty}</span>
+            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+              <span>${item.product.name}${weightInfo} x${item.qty}${modifierInfo}</span>
               <span>R${(itemPrice * item.qty).toFixed(2)}</span>
             </div>
           `;
         }).join('')}
-        <div class="line"></div>
-        <div class="totals">
-          <div class="item">
+        <hr style="border: 1px dashed #000; margin: 10px 0;" />
+        <div style="font-weight: bold;">
+          <div style="display: flex; justify-content: space-between; margin: 5px 0;">
             <span>Subtotal:</span>
             <span>R${totals.subtotal.toFixed(2)}</span>
           </div>
-          <div class="item">
+          <div style="display: flex; justify-content: space-between; margin: 5px 0;">
             <span>Tax:</span>
             <span>R${totals.taxAmount.toFixed(2)}</span>
           </div>
           ${discountAmount > 0 ? `
-            <div class="item">
+            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
               <span>Discount:</span>
               <span>-R${discountAmount.toFixed(2)}</span>
             </div>
           ` : ''}
-          <div class="item">
-            <span>Total:</span>
+          <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 1.2em;">
+            <span>TOTAL:</span>
             <span>R${totals.total.toFixed(2)}</span>
           </div>
+          <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+            <span>Payment:</span>
+            <span>${paymentMethod.toUpperCase()}</span>
+          </div>
         </div>
-        <div class="center" style="margin-top: 20px;">
-          <p>Thank you for your purchase!</p>
+        <div style="text-align: center; margin-top: 20px;">
+          <p style="margin: 5px 0;">Thank you for visiting CASBAH!</p>
+          <p style="margin: 5px 0; font-size: 0.9em;">VAT included where applicable</p>
         </div>
-        <script>
-          window.onload = () => {
-            window.print();
-            setTimeout(() => window.close(), 500);
-          };
-        </script>
-      </body>
-      </html>
+      </div>
     `;
 
-    receiptWindow.document.write(receiptHtml);
-    receiptWindow.document.close();
+    // Create a hidden iframe for printing
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'absolute';
+    printFrame.style.top = '-10000px';
+    printFrame.style.left = '-10000px';
+    document.body.appendChild(printFrame);
+
+    const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
+    if (frameDoc) {
+      frameDoc.open();
+      frameDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Receipt</title>
+          <style>
+            @media print {
+              body { margin: 0; padding: 0; }
+              @page { margin: 0; size: 80mm auto; }
+            }
+          </style>
+        </head>
+        <body>${receiptContent}</body>
+        </html>
+      `);
+      frameDoc.close();
+
+      // Wait for content to load then print
+      setTimeout(() => {
+        printFrame.contentWindow?.print();
+        // Clean up after printing
+        setTimeout(() => {
+          document.body.removeChild(printFrame);
+        }, 1000);
+      }, 250);
+    }
+    
+    toast.success('Receipt sent to printer');
   };
 
   const totals = calculateTotals();
@@ -445,72 +582,87 @@ const POS = () => {
                 />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Section Tabs */}
+              <div className="flex gap-2 border-b pb-3">
+                <Button
+                  variant={activeSection === 'food' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveSection('food')}
+                  disabled={isLocked}
+                  className="gap-2"
+                >
+                  <UtensilsCrossed className="h-4 w-4" />
+                  Food
+                </Button>
+                <Button
+                  variant={activeSection === 'hot' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveSection('hot')}
+                  disabled={isLocked}
+                  className="gap-2"
+                >
+                  <Coffee className="h-4 w-4" />
+                  Hot Drinks
+                </Button>
+                <Button
+                  variant={activeSection === 'cold' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveSection('cold')}
+                  disabled={isLocked}
+                  className="gap-2"
+                >
+                  <IceCream className="h-4 w-4" />
+                  Cold Drinks
+                </Button>
+              </div>
+
               {isLocked ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <p className="text-lg font-medium">POS Locked</p>
                   <p className="text-sm">Waiting for admin to approve your End of Day report</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {filteredProducts?.map(product => (
-                    <Button
-                      key={product.id}
-                      variant="outline"
-                      className="h-auto flex-col items-start p-4 hover:bg-accent"
-                      onClick={() => {
-                        if (product.pricing_type === 'weight_based') {
-                          const weight = prompt('Enter weight amount (e.g., 0.3, 0.5, 1):');
-                          if (weight && !isNaN(parseFloat(weight))) {
-                            setSelectedProductForCustomization(product);
-                            if (hasModifiers.has(product.id)) {
-                              setModifierDialogOpen(true);
-                              // Store weight info temporarily to add after modifier selection
-                              (product as any).tempWeight = parseFloat(weight);
-                              (product as any).tempUnit = product.unit_type || 'kg';
-                            } else {
-                              setCart([...cart, { 
-                                product, 
-                                qty: 1, 
-                                weight_amount: parseFloat(weight),
-                                weight_unit: product.unit_type || 'kg'
-                              }]);
-                              toast.success(`Added ${product.name} to cart`);
-                            }
-                          }
-                        } else {
-                          openCustomization(product);
-                        }
-                      }}
-                      disabled={isLocked}
-                    >
-                      <div className="w-full aspect-square mb-3 rounded-md bg-muted flex items-center justify-center overflow-hidden">
-                        {product.image_url ? (
-                          <img 
-                            src={product.image_url} 
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Package className="h-12 w-12 text-muted-foreground/40" />
-                        )}
+                <div className="space-y-6 max-h-[60vh] overflow-y-auto">
+                  {activeSection === 'food' && Object.entries(categorizedProducts.food).map(([category, items]) => (
+                    <div key={category}>
+                      <h3 className="font-semibold text-sm text-muted-foreground mb-2 sticky top-0 bg-background py-1">{category}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {items.map(product => (
+                          <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
+                        ))}
                       </div>
-                      <span className="font-semibold text-sm">{product.name}</span>
-                      <span className="text-xs text-muted-foreground">{product.sku}</span>
-                      {product.pricing_type === 'weight_based' ? (
-                        <span className="text-lg font-bold text-primary mt-2">
-                          R{product.price_per_unit?.toFixed(2)}/{product.unit_type || 'kg'}
-                        </span>
-                      ) : (
-                        <span className="text-lg font-bold text-primary mt-2">R{product.price.toFixed(2)}</span>
-                      )}
-                      <Badge variant="secondary" className="mt-1">Stock: {product.stock_qty}</Badge>
-                    </Button>
+                    </div>
                   ))}
+                  
+                  {activeSection === 'hot' && Object.entries(categorizedProducts.hotDrinks).map(([category, items]) => (
+                    <div key={category}>
+                      <h3 className="font-semibold text-sm text-muted-foreground mb-2 sticky top-0 bg-background py-1">{category}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {items.map(product => (
+                          <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {activeSection === 'cold' && Object.entries(categorizedProducts.coldDrinks).map(([category, items]) => (
+                    <div key={category}>
+                      <h3 className="font-semibold text-sm text-muted-foreground mb-2 sticky top-0 bg-background py-1">{category}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {items.map(product => (
+                          <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {((activeSection === 'food' && Object.keys(categorizedProducts.food).length === 0) ||
+                    (activeSection === 'hot' && Object.keys(categorizedProducts.hotDrinks).length === 0) ||
+                    (activeSection === 'cold' && Object.keys(categorizedProducts.coldDrinks).length === 0)) && (
+                    <p className="text-center text-muted-foreground py-8">No products found</p>
+                  )}
                 </div>
-              )}
-              {filteredProducts?.length === 0 && !isLocked && (
-                <p className="text-center text-muted-foreground py-8">No products found</p>
               )}
             </CardContent>
           </Card>
@@ -622,6 +774,8 @@ const POS = () => {
                       <SelectContent>
                         <SelectItem value="cash">Cash</SelectItem>
                         <SelectItem value="card">Card (Yoco)</SelectItem>
+                        <SelectItem value="capitec">Capitec Pay</SelectItem>
+                        <SelectItem value="eft">EFT / Bank Transfer</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
