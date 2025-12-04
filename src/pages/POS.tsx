@@ -12,13 +12,14 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package, Keyboard } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package, Keyboard, Eye } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
 import ModifierSelector, { SelectedModifier } from '@/components/ModifierSelector';
 import NumberPadDialog from '@/components/NumberPadDialog';
 import SearchKeypad from '@/components/SearchKeypad';
+import PrintPreviewDialog from '@/components/PrintPreviewDialog';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/casbah-logo.svg';
 import { printOrder, PrintOrderData, PrintItem } from '@/lib/printService';
@@ -144,6 +145,8 @@ const POS = () => {
   const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
   const [cashPadOpen, setCashPadOpen] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
+  const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
+  const [previewOrderData, setPreviewOrderData] = useState<PrintOrderData | null>(null);
 
   // Check for pending EOD on mount and periodically
   useEffect(() => {
@@ -568,6 +571,47 @@ const POS = () => {
     toast.success('Order sent to kitchen & receipt printed');
   };
 
+  const openPrintPreview = () => {
+    if (cart.length === 0) {
+      toast.error('Add items to cart first');
+      return;
+    }
+
+    const { subtotal, taxAmount, total } = calculateTotals();
+    
+    const printItems: PrintItem[] = cart.map(item => {
+      const categoryName = getCategoryName(item.product.category_id);
+      const itemPrice = getItemPrice(item);
+      return {
+        productName: item.product.name,
+        qty: item.qty,
+        weightAmount: item.weight_amount,
+        weightUnit: item.weight_unit,
+        modifiers: item.modifiers?.map(m => m.modifier_name),
+        categoryName,
+        kitchenStation: item.product.kitchen_station || 'general',
+        price: itemPrice,
+        lineTotal: itemPrice * item.qty,
+      };
+    });
+
+    const orderData: PrintOrderData = {
+      orderNumber: `PREVIEW-${Date.now().toString(36).toUpperCase()}`,
+      orderType: 'takeout',
+      items: printItems,
+      subtotal,
+      taxAmount,
+      discountAmount,
+      total,
+      paymentMethod,
+      cashierName: profile?.full_name,
+      timestamp: new Date(),
+    };
+
+    setPreviewOrderData(orderData);
+    setPrintPreviewOpen(true);
+  };
+
   const totals = calculateTotals();
 
   return (
@@ -806,14 +850,25 @@ const POS = () => {
                   </div>
                 )}
 
-                <Button 
-                  className="w-full" 
-                  size="sm"
-                  onClick={completeSale}
-                  disabled={cart.length === 0 || isProcessingPayment || isLocked}
-                >
-                  {isProcessingPayment ? 'Processing...' : `Complete Sale (R${totals.total.toFixed(2)})`}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={openPrintPreview}
+                    disabled={cart.length === 0 || isLocked}
+                    className="flex-shrink-0"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    className="flex-1" 
+                    size="sm"
+                    onClick={completeSale}
+                    disabled={cart.length === 0 || isProcessingPayment || isLocked}
+                  >
+                    {isProcessingPayment ? 'Processing...' : `Complete Sale (R${totals.total.toFixed(2)})`}
+                  </Button>
+                </div>
               </div>
             )}
           </Card>
@@ -848,6 +903,13 @@ const POS = () => {
           onConfirm={handleModifierConfirm}
         />
       )}
+
+      {/* Print Preview Dialog */}
+      <PrintPreviewDialog
+        open={printPreviewOpen}
+        onOpenChange={setPrintPreviewOpen}
+        orderData={previewOrderData}
+      />
     </div>
   );
 };
