@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,17 +6,62 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import logo from '@/assets/casbah-logo.svg';
+import PINLogin from '@/components/PINLogin';
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('cashier');
+  const [loginMode, setLoginMode] = useState<'pin' | 'email'>('pin');
   const navigate = useNavigate();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        redirectBasedOnRole(session.user.id);
+      }
+    };
+    checkSession();
+  }, []);
+
+  const redirectBasedOnRole = async (userId: string) => {
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    const userRoles = roles?.map(r => r.role) || [];
+    
+    if (userRoles.includes('admin')) {
+      navigate('/admin');
+    } else if (userRoles.includes('waiter')) {
+      navigate('/waiter');
+    } else if (userRoles.includes('kitchen')) {
+      navigate('/kitchen');
+    } else if (userRoles.includes('cashier')) {
+      navigate('/pos');
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handlePINSuccess = (userId: string, role: string) => {
+    // For PIN login, redirect based on role
+    if (role === 'admin') {
+      navigate('/admin');
+    } else if (role === 'waiter') {
+      navigate('/waiter');
+    } else if (role === 'kitchen') {
+      navigate('/kitchen');
+    } else {
+      navigate('/pos');
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,26 +76,8 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Fetch user roles to determine where to redirect
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', data.user.id);
-
-        const userRoles = roles?.map(r => r.role) || [];
-        
-        if (userRoles.includes('admin')) {
-          navigate('/admin');
-        } else if (userRoles.includes('waiter')) {
-          navigate('/waiter');
-        } else if (userRoles.includes('kitchen')) {
-          navigate('/kitchen');
-        } else if (userRoles.includes('cashier')) {
-          navigate('/pos');
-        } else {
-          navigate('/');
-        }
         toast.success('Signed in successfully');
+        await redirectBasedOnRole(data.user.id);
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign in');
@@ -64,14 +91,15 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Note: Role is NOT sent to signup - server always assigns 'cashier'
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            full_name: fullName,
-            role: role
+            full_name: fullName
+            // Role removed - server hardcodes 'cashier' for security
           }
         }
       });
@@ -79,18 +107,8 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        toast.success('Account created successfully!');
-        
-        // Auto sign in and redirect based on role
-        if (role === 'admin') {
-          navigate('/admin');
-        } else if (role === 'waiter') {
-          navigate('/waiter');
-        } else if (role === 'kitchen') {
-          navigate('/kitchen');
-        } else {
-          navigate('/pos');
-        }
+        toast.success('Account created! You have been assigned as a cashier. Contact admin for role changes.');
+        navigate('/pos');
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to create account');
@@ -98,6 +116,16 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Show PIN login for staff
+  if (loginMode === 'pin') {
+    return (
+      <PINLogin
+        onSuccess={handlePINSuccess}
+        onSwitchToEmail={() => setLoginMode('email')}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
@@ -182,26 +210,26 @@ const Auth = () => {
                     minLength={6}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select value={role} onValueChange={setRole}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cashier">Cashier</SelectItem>
-                      <SelectItem value="waiter">Waiter</SelectItem>
-                      <SelectItem value="kitchen">Kitchen Staff</SelectItem>
-                      <SelectItem value="admin">Administrator</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  New accounts are assigned as Cashier. Contact admin for role changes.
+                </p>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating account...' : 'Create Account'}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
+          
+          {/* Switch back to PIN login */}
+          <div className="text-center pt-4 border-t">
+            <button
+              type="button"
+              onClick={() => setLoginMode('pin')}
+              className="text-sm text-muted-foreground hover:text-primary underline"
+            >
+              Staff? Use PIN login
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>
