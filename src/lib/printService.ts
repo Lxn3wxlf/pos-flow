@@ -102,7 +102,15 @@ const DEFAULT_KITCHEN_CATEGORIES = [
 ];
 
 // Default logo path for receipts and kitchen tickets
-const DEFAULT_LOGO_URL = '/casbah-logo-print.jpg';
+// Use window.location.origin to ensure the path works in all contexts (preview, print, etc.)
+const getDefaultLogoUrl = () => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/casbah-logo-print.jpg`;
+  }
+  return '/casbah-logo-print.jpg';
+};
+
+const DEFAULT_LOGO_URL = getDefaultLogoUrl();
 
 // ESC/POS Commands
 const ESC = '\x1B';
