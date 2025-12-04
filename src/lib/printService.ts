@@ -565,8 +565,9 @@ export const printOrder = async (
     console.log('[Print] Step 1: Sending to KITCHEN printer...');
     const kitchenContent = generateKitchenTicket(order, kitchenItems);
     
+    // Fire network print in background (non-blocking)
     if (kitchenPrinter?.ip_address) {
-      await sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen');
+      sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen').catch(() => {});
     }
     // Always show browser print dialog for testing
     await printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
@@ -580,8 +581,9 @@ export const printOrder = async (
     console.log('[Print] Step 2: Sending to RECEIPT printer (180)...');
     const receiptContent = generateReceipt(order, branding);
     
+    // Fire network print in background (non-blocking)
     if (receiptPrinter?.ip_address) {
-      await sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt (180)');
+      sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt (180)').catch(() => {});
     }
     // Always show browser print dialog for testing
     await printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT');
