@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncEngine } from '@/hooks/useSyncEngine';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { db, LocalProduct, clearSyncQueue } from '@/lib/db';
+import { db, LocalProduct, initDatabase, resetDatabase as resetDb } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,8 +153,7 @@ const POS = () => {
   // Database recovery function
   const resetDatabase = async () => {
     try {
-      await db.delete();
-      await db.open();
+      await resetDb();
       setDbError(null);
       toast.success('Database reset successful. Refreshing...');
       window.location.reload();
@@ -164,9 +163,15 @@ const POS = () => {
     }
   };
 
-  // Clear sync queue on mount to prevent corrupted data issues
+  // Initialize database on mount with error recovery
   useEffect(() => {
-    clearSyncQueue();
+    const init = async () => {
+      const success = await initDatabase();
+      if (!success) {
+        setDbError('Failed to initialize database. Please reset.');
+      }
+    };
+    init();
   }, []);
 
   // Check for pending EOD on mount and periodically
