@@ -17,6 +17,8 @@ export interface LocalProduct {
   pricing_type?: string;
   price_per_unit?: number;
   unit_type?: string;
+  kitchen_station?: string;
+  estimated_prep_minutes?: number;
 }
 
 export interface LocalSale {

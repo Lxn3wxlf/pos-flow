@@ -19,6 +19,7 @@ import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
 import ModifierSelector, { SelectedModifier } from '@/components/ModifierSelector';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/casbah-logo.svg';
+import { printOrder, PrintOrderData, PrintItem } from '@/lib/printService';
 
 interface CartItem {
   product: LocalProduct;
@@ -432,97 +433,47 @@ const POS = () => {
   };
 
   const printReceipt = (saleId: string, items: CartItem[], totals: any) => {
-    const receiptContent = `
-      <div style="font-family: monospace; max-width: 300px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center;">
-          <h2 style="margin: 0;">CASBAH</h2>
-          <p style="margin: 5px 0;">194 Marine Drive</p>
-          <p style="margin: 5px 0;">065 683 5702</p>
-          <p style="margin: 10px 0;">Receipt #${saleId.slice(0, 8).toUpperCase()}</p>
-          <p style="margin: 5px 0;">${new Date().toLocaleString()}</p>
-        </div>
-        <hr style="border: 1px dashed #000; margin: 10px 0;" />
-        ${items.map(item => {
-          const itemPrice = getItemPrice(item);
-          const weightInfo = item.weight_amount ? ` (${item.weight_amount}${item.weight_unit})` : '';
-          const modifierInfo = item.modifiers?.length ? `<br><small style="color: #666;">${item.modifiers.map(m => m.modifier_name).join(', ')}</small>` : '';
-          return `
-            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-              <span>${item.product.name}${weightInfo} x${item.qty}${modifierInfo}</span>
-              <span>R${(itemPrice * item.qty).toFixed(2)}</span>
-            </div>
-          `;
-        }).join('')}
-        <hr style="border: 1px dashed #000; margin: 10px 0;" />
-        <div style="font-weight: bold;">
-          <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-            <span>Subtotal:</span>
-            <span>R${totals.subtotal.toFixed(2)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-            <span>Tax:</span>
-            <span>R${totals.taxAmount.toFixed(2)}</span>
-          </div>
-          ${discountAmount > 0 ? `
-            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-              <span>Discount:</span>
-              <span>-R${discountAmount.toFixed(2)}</span>
-            </div>
-          ` : ''}
-          <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 1.2em;">
-            <span>TOTAL:</span>
-            <span>R${totals.total.toFixed(2)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-            <span>Payment:</span>
-            <span>${paymentMethod.toUpperCase()}</span>
-          </div>
-        </div>
-        <div style="text-align: center; margin-top: 20px;">
-          <p style="margin: 5px 0;">Thank you for visiting CASBAH!</p>
-          <p style="margin: 5px 0; font-size: 0.9em;">VAT included where applicable</p>
-        </div>
-      </div>
-    `;
+    // Build print items with category information for routing
+    const printItems: PrintItem[] = items.map(item => {
+      const categoryName = getCategoryName(item.product.category_id);
+      const itemPrice = getItemPrice(item);
+      return {
+        productName: item.product.name,
+        qty: item.qty,
+        weightAmount: item.weight_amount,
+        weightUnit: item.weight_unit,
+        modifiers: item.modifiers?.map(m => m.modifier_name),
+        categoryName,
+        kitchenStation: item.product.kitchen_station || 'general',
+        price: itemPrice,
+        lineTotal: itemPrice * item.qty,
+      };
+    });
 
-    // Create a hidden iframe for printing
-    const printFrame = document.createElement('iframe');
-    printFrame.style.position = 'absolute';
-    printFrame.style.top = '-10000px';
-    printFrame.style.left = '-10000px';
-    document.body.appendChild(printFrame);
+    // Build order data for print service
+    const orderData: PrintOrderData = {
+      orderNumber: `SALE-${saleId.slice(0, 8).toUpperCase()}`,
+      orderType: 'takeout', // POS counter sales default to takeout
+      items: printItems,
+      subtotal: totals.subtotal,
+      taxAmount: totals.taxAmount,
+      discountAmount: discountAmount,
+      total: totals.total,
+      paymentMethod: paymentMethod,
+      cashierName: profile?.full_name,
+      timestamp: new Date(),
+    };
 
-    const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
-    if (frameDoc) {
-      frameDoc.open();
-      frameDoc.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Receipt</title>
-          <style>
-            @media print {
-              body { margin: 0; padding: 0; }
-              @page { margin: 0; size: 80mm auto; }
-            }
-          </style>
-        </head>
-        <body>${receiptContent}</body>
-        </html>
-      `);
-      frameDoc.close();
-
-      // Wait for content to load then print
-      setTimeout(() => {
-        printFrame.contentWindow?.print();
-        // Clean up after printing
-        setTimeout(() => {
-          document.body.removeChild(printFrame);
-        }, 1000);
-      }, 250);
-    }
+    // Print with multi-destination routing:
+    // - Kitchen ticket for food/bar items
+    // - 2 receipt copies (customer + cashier/till)
+    printOrder(orderData, {
+      printKitchenTicket: true,
+      printReceipt: true,
+      receiptCopies: 2, // Customer copy + Till reconciliation copy
+    });
     
-    toast.success('Receipt sent to printer');
+    toast.success('Receipts sent to printer');
   };
 
   const totals = calculateTotals();
