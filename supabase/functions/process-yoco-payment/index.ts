@@ -14,8 +14,16 @@ serve(async (req) => {
   try {
     const { amount, currency = 'ZAR', metadata, sale_id } = await req.json();
 
-    // TODO: Replace with actual Yoco secret key when client provides it
-    const YOCO_SECRET_KEY = 'sk_test_dummy_key_replace_with_real_key_960c73ed6b604966';
+    // Get Yoco key from environment variable (secure)
+    const YOCO_SECRET_KEY = Deno.env.get('YOCO_SECRET_KEY');
+    
+    if (!YOCO_SECRET_KEY) {
+      console.error('YOCO_SECRET_KEY not configured');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Payment system not configured. Please add YOCO_SECRET_KEY.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
     
     // Yoco API endpoint for creating payments
     const yocoResponse = await fetch('https://online.yoco.com/v1/charges/', {
