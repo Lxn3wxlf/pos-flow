@@ -27,6 +27,7 @@ export default function TimeTracking() {
   const [onBreak, setOnBreak] = useState(false);
   const [loading, setLoading] = useState(true);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricReason, setBiometricReason] = useState<string | null>(null);
   const [authenticating, setAuthenticating] = useState(false);
 
   useEffect(() => {
@@ -37,11 +38,14 @@ export default function TimeTracking() {
 
   const checkBiometricAvailability = async () => {
     try {
-      const available = await biometricAuth.isAvailable();
-      setBiometricAvailable(available);
+      const info = await biometricAuth.getAvailabilityInfo();
+      setBiometricAvailable(info.available);
+      setBiometricReason(info.reason || null);
+      console.log('Biometric status:', info);
     } catch (error) {
       console.error('Failed to check biometric availability:', error);
       setBiometricAvailable(false);
+      setBiometricReason('Error checking availability');
     }
   };
 
@@ -211,11 +215,18 @@ export default function TimeTracking() {
         <h1 className="text-2xl font-bold">Time Tracking</h1>
       </AppHeader>
       <div className="container mx-auto p-6">
-        {biometricAvailable && (
+        {biometricAvailable ? (
           <Alert className="mb-6 border-primary/20 bg-primary/5">
             <Fingerprint className="h-4 w-4 text-primary" />
             <AlertDescription className="text-sm">
               Biometric authentication is enabled for secure clock in/out
+            </AlertDescription>
+          </Alert>
+        ) : biometricReason && (
+          <Alert className="mb-6 border-yellow-500/20 bg-yellow-500/5">
+            <Fingerprint className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-sm text-yellow-700">
+              Fingerprint not available: {biometricReason}
             </AlertDescription>
           </Alert>
         )}
