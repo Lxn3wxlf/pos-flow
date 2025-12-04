@@ -101,6 +101,9 @@ const DEFAULT_KITCHEN_CATEGORIES = [
   'Mains', 'Starters', 'Grills', 'Platters', 'Burgers', 'Sides', 'Dessert'
 ];
 
+// Default logo path for receipts and kitchen tickets
+const DEFAULT_LOGO_URL = '/casbah-logo-print.jpg';
+
 // ESC/POS Commands
 const ESC = '\x1B';
 const GS = '\x1D';
@@ -211,7 +214,8 @@ export const generateKitchenTicket = (order: PrintOrderData, kitchenItems?: Prin
   return `
     <div style="font-family: 'Courier New', monospace; width: 280px; padding: 10px; background: white; color: black;">
       <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
-        <div style="font-size: 24px; font-weight: bold;">🍳 KITCHEN ORDER</div>
+        <img src="${DEFAULT_LOGO_URL}" alt="Casbah Logo" style="max-width: 180px; max-height: 70px; margin-bottom: 8px;" onerror="this.style.display='none'" />
+        <div style="font-size: 20px; font-weight: bold;">KITCHEN ORDER</div>
         <div style="font-size: 28px; font-weight: bold; margin: 5px 0;">
           #${order.orderNumber.split('-').pop()?.toUpperCase()}
         </div>
@@ -271,15 +275,14 @@ export const generateReceipt = (
   const phone = branding?.phone || '065 683 5702';
   const footerText = branding?.footer_text || 'Thank you for visiting CASBAH!';
 
+  // Use branding logo if set, otherwise use default logo
+  const logoUrl = branding?.logo_url || DEFAULT_LOGO_URL;
+
   return `
     <div style="font-family: 'Courier New', monospace; width: 280px; padding: 10px; background: white; color: black;">
       <div style="text-align: center; margin-bottom: 10px;">
-        ${branding?.logo_url ? `
-          <img src="${branding.logo_url}" alt="Logo" style="max-width: 200px; max-height: 60px; margin-bottom: 5px;" />
-        ` : `
-          <div style="font-size: 28px; font-weight: bold; letter-spacing: 2px;">${businessName}</div>
-          <div style="font-size: 11px;">GRILL & COFFEE</div>
-        `}
+        <img src="${logoUrl}" alt="${businessName} Logo" style="max-width: 200px; max-height: 70px; margin-bottom: 5px;" onerror="this.style.display='none'" />
+        <div style="font-size: 11px;">GRILL & COFFEE</div>
       </div>
       
       <div style="text-align: center; margin-bottom: 10px;">
