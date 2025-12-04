@@ -35,6 +35,7 @@ interface CartItem {
 
 // Menu category order matching physical menu
 const MENU_CATEGORY_ORDER = [
+  'Breakfast',
   'Midweek Specials',
   'Combos',
   'Family Meal',
@@ -697,16 +698,21 @@ const POS = () => {
                 <div className="space-y-6 max-h-[60vh] overflow-y-auto">
                   {categorizedProducts.map(({ category, items }) => {
                     const isSpecial = category === 'Midweek Specials';
+                    const isBreakfast = category === 'Breakfast';
                     return (
                       <div key={category}>
                         <h3 className={`font-bold text-sm mb-2 sticky top-0 py-2 px-3 rounded-md uppercase tracking-wide ${
-                          isSpecial 
-                            ? 'text-amber-900 dark:text-amber-100 bg-gradient-to-r from-amber-200 to-orange-200 dark:from-amber-900/60 dark:to-orange-900/60 border border-amber-300 dark:border-amber-700' 
-                            : 'text-blue-800 dark:text-blue-100 bg-blue-100 dark:bg-blue-900/50'
+                          isBreakfast
+                            ? 'text-yellow-900 dark:text-yellow-100 bg-gradient-to-r from-yellow-200 to-orange-200 dark:from-yellow-900/60 dark:to-orange-900/60 border border-yellow-400 dark:border-yellow-700'
+                            : isSpecial 
+                              ? 'text-amber-900 dark:text-amber-100 bg-gradient-to-r from-amber-200 to-orange-200 dark:from-amber-900/60 dark:to-orange-900/60 border border-amber-300 dark:border-amber-700' 
+                              : 'text-blue-800 dark:text-blue-100 bg-blue-100 dark:bg-blue-900/50'
                         }`}>
+                          {isBreakfast && '☀️ '}
                           {isSpecial && '⭐ '}
                           {category}
                           {isSpecial && ' ⭐'}
+                          {isBreakfast && ' ☀️'}
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                           {items.map(product => (
