@@ -1226,6 +1226,30 @@ export type Database = {
         }
         Relationships: []
       }
+      qz_printers: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          printer_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          printer_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          printer_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       receipt_branding: {
         Row: {
           address_line1: string | null

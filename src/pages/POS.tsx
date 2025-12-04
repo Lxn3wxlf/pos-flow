@@ -23,6 +23,7 @@ import PrintPreviewDialog from '@/components/PrintPreviewDialog';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/casbah-logo.svg';
 import { printOrder, PrintOrderData, PrintItem } from '@/lib/printService';
+import { autoPrintOrder, isQZConnected, OrderData, initQZTray } from '@/lib/qzTray';
 
 interface CartItem {
   product: LocalProduct;
@@ -172,6 +173,15 @@ const POS = () => {
       }
     };
     init();
+  }, []);
+
+  // Initialize QZ Tray for silent printing
+  useEffect(() => {
+    initQZTray().then(connected => {
+      if (connected) {
+        console.log('[POS] QZ Tray connected for silent printing');
+      }
+    });
   }, []);
 
   // Check for pending EOD on mount and periodically
@@ -603,10 +613,43 @@ const POS = () => {
       };
     });
 
-    // Build order data for print service
+    // Try QZ Tray silent printing first
+    if (isQZConnected()) {
+      const qzOrderData: OrderData = {
+        id: saleId,
+        orderNumber: saleId.slice(0, 8).toUpperCase(),
+        items: items.map(item => {
+          const itemPrice = getItemPrice(item);
+          return {
+            qty: item.qty,
+            name: item.product.name,
+            price: itemPrice,
+            modifiers: item.modifiers?.map(m => m.modifier_name),
+          };
+        }),
+        total: totals.total,
+        subtotal: totals.subtotal,
+        tax: totals.taxAmount,
+        discount: discountAmount,
+        paymentMethod: paymentMethod,
+        cashierName: profile?.full_name,
+        timestamp: new Date(),
+      };
+
+      const qzResult = await autoPrintOrder(qzOrderData);
+      
+      if (qzResult.success) {
+        toast.success(qzResult.message);
+        return; // Exit early if QZ Tray printing succeeded
+      }
+      // If QZ fails, fall through to legacy print methods
+      console.log('[Print] QZ Tray failed, falling back to legacy printing');
+    }
+
+    // Legacy print methods (network printers / browser fallback)
     const orderData: PrintOrderData = {
       orderNumber: `SALE-${saleId.slice(0, 8).toUpperCase()}`,
-      orderType: 'takeout', // POS counter sales default to takeout
+      orderType: 'takeout',
       items: printItems,
       subtotal: totals.subtotal,
       taxAmount: totals.taxAmount,
@@ -617,9 +660,6 @@ const POS = () => {
       timestamp: new Date(),
     };
 
-    // Print with multi-destination routing:
-    // - Kitchen ticket for food/bar items (auto-routed based on settings)
-    // - Receipt for customer
     const printResult = await printOrder(orderData, {
       printKitchenTicket: true,
       printReceipt: true,
