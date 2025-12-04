@@ -613,7 +613,7 @@ export const printDualOrder = async (order: PrintOrderData): Promise<void> => {
   return printOrder(order, {
     printKitchenTicket: true,
     printReceipt: true,
-    receiptCopies: 2
+    receiptCopies: 1
   });
 };
 
