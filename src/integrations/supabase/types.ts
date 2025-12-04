@@ -901,6 +901,39 @@ export type Database = {
           },
         ]
       }
+      printer_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          order_id: string | null
+          print_type: string
+          printer_ip: string | null
+          printer_name: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          order_id?: string | null
+          print_type: string
+          printer_ip?: string | null
+          printer_name: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          order_id?: string | null
+          print_type?: string
+          printer_ip?: string | null
+          printer_name?: string
+          status?: string
+        }
+        Relationships: []
+      }
       printer_settings: {
         Row: {
           created_at: string
@@ -908,6 +941,7 @@ export type Database = {
           ip_address: string
           is_active: boolean
           name: string
+          port: number | null
           printer_type: string
           updated_at: string
         }
@@ -917,6 +951,7 @@ export type Database = {
           ip_address: string
           is_active?: boolean
           name: string
+          port?: number | null
           printer_type: string
           updated_at?: string
         }
@@ -926,6 +961,7 @@ export type Database = {
           ip_address?: string
           is_active?: boolean
           name?: string
+          port?: number | null
           printer_type?: string
           updated_at?: string
         }

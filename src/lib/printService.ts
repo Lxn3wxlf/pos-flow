@@ -530,6 +530,113 @@ export const sendToNetworkPrinter = async (
   return false;
 };
 
+export interface PrintResult {
+  success: boolean;
+  message: string;
+  kitchenPrinted: boolean;
+  receiptPrinted: boolean;
+}
+
+/**
+ * Call the edge function for dual printing with ESC/POS support
+ * Prints to both kitchen and receipt printers simultaneously
+ */
+export const printOrderViaEdgeFunction = async (
+  order: PrintOrderData,
+  orderId: string
+): Promise<PrintResult> => {
+  try {
+    console.log('[Print] Calling edge function for dual printing...');
+    
+    // Format order data for edge function
+    const orderData = {
+      order_number: order.orderNumber,
+      order_type: order.orderType,
+      table_number: order.tableName,
+      customer_name: order.customerName,
+      items: order.items.map(item => ({
+        product_name: item.productName,
+        qty: item.qty,
+        price_at_order: item.price || 0,
+        line_total: item.lineTotal || (item.price || 0) * item.qty,
+        special_instructions: item.specialInstructions,
+        modifiers: item.modifiers?.map(m => ({ modifier_name: m, price_adjustment: 0 })) || [],
+      })),
+      subtotal: order.subtotal,
+      tax: order.taxAmount,
+      total: order.total,
+      payment_method: order.paymentMethod,
+      cashier_name: order.cashierName,
+      created_at: order.timestamp.toISOString(),
+    };
+
+    const { data, error } = await supabase.functions.invoke('print-order', {
+      body: {
+        order_id: orderId,
+        order_data: orderData,
+        print_type: 'both',
+      },
+    });
+
+    if (error) {
+      console.error('[Print] Edge function error:', error);
+      return {
+        success: false,
+        message: 'Print service unavailable',
+        kitchenPrinted: false,
+        receiptPrinted: false,
+      };
+    }
+
+    console.log('[Print] Edge function response:', data);
+
+    // If network printers failed, fallback to browser print
+    const needsBrowserFallback = !data.results?.receipt?.success && !data.results?.kitchen?.success;
+    
+    if (needsBrowserFallback) {
+      console.log('[Print] Network printers unavailable, using browser fallback...');
+      // Fallback to browser printing
+      await printOrderFallback(order);
+    }
+
+    return {
+      success: true,
+      message: data.message || 'Print job sent',
+      kitchenPrinted: data.results?.kitchen?.success || needsBrowserFallback,
+      receiptPrinted: data.results?.receipt?.success || needsBrowserFallback,
+    };
+  } catch (error) {
+    console.error('[Print] Failed to call edge function:', error);
+    // Fallback to browser printing
+    await printOrderFallback(order);
+    return {
+      success: true,
+      message: 'Printed via browser (network unavailable)',
+      kitchenPrinted: true,
+      receiptPrinted: true,
+    };
+  }
+};
+
+/**
+ * Browser fallback printing when network printers are unavailable
+ */
+const printOrderFallback = async (order: PrintOrderData): Promise<void> => {
+  const { printers, routes, branding } = await fetchPrintSettings();
+  const kitchenItems = filterKitchenItems(order.items, routes, printers);
+  
+  // Print kitchen ticket first
+  if (kitchenItems.length > 0) {
+    const kitchenContent = generateKitchenTicket(order, kitchenItems);
+    await printToBrowser(kitchenContent, 1, DEFAULT_PAPER_SIZE, 'KITCHEN ORDER');
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+  
+  // Print receipt
+  const receiptContent = generateReceipt(order, branding);
+  await printToBrowser(receiptContent, 1, DEFAULT_PAPER_SIZE, 'RECEIPT');
+};
+
 /**
  * Main print function - handles automatic sequential printing
  * Prints kitchen first (order 1), then receipt (order 180) based on configured settings
@@ -543,11 +650,11 @@ export const printOrder = async (
     receiptCopies?: number;
     paperSize?: PaperSize;
   } = {}
-): Promise<void> => {
+): Promise<PrintResult> => {
   const {
     printKitchenTicket = true,
     printReceipt = true,
-    receiptCopies = 2,
+    receiptCopies = 1,
     paperSize = DEFAULT_PAPER_SIZE
   } = options;
 
@@ -562,54 +669,81 @@ export const printOrder = async (
   const kitchenPrinter = printers.find(p => p.printer_type === 'kitchen');
   const receiptPrinter = printers.find(p => p.printer_type === 'receipt');
 
-  console.log('[Print] Starting print sequence:', {
+  console.log('[Print] Starting dual print sequence:', {
     kitchenItems: kitchenItems.length,
     kitchenPrinter: kitchenPrinter?.name || 'None',
     receiptPrinter: receiptPrinter?.name || 'None (using 180 default)',
   });
 
-  // STEP 1: Print kitchen ticket FIRST
-  if (printKitchenTicket && hasKitchenItems) {
-    console.log('[Print] Step 1: Sending to KITCHEN printer...');
-    const kitchenContent = generateKitchenTicket(order, kitchenItems);
-    
-    let kitchenPrintSuccess = false;
-    if (kitchenPrinter?.ip_address) {
-      kitchenPrintSuccess = await sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen');
-    }
-    // Fall back to browser print if network printer failed or not configured
-    if (!kitchenPrintSuccess) {
-      console.log('[Print] Kitchen network print failed, falling back to browser print dialog...');
-      await printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
-    }
-    
-    // Wait before printing receipt
+  let kitchenPrinted = false;
+  let receiptPrinted = false;
+
+  // Prepare print content
+  const kitchenContent = hasKitchenItems && printKitchenTicket ? generateKitchenTicket(order, kitchenItems) : null;
+  const receiptContent = printReceipt ? generateReceipt(order, branding) : null;
+
+  // Send to both printers simultaneously using Promise.all
+  const printPromises: Promise<boolean>[] = [];
+
+  if (kitchenContent && kitchenPrinter?.ip_address) {
+    printPromises.push(
+      sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen')
+        .then(success => { kitchenPrinted = success; return success; })
+    );
+  }
+
+  if (receiptContent && receiptPrinter?.ip_address) {
+    printPromises.push(
+      sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt')
+        .then(success => { receiptPrinted = success; return success; })
+    );
+  }
+
+  // Wait for simultaneous print attempts
+  if (printPromises.length > 0) {
+    await Promise.all(printPromises);
+  }
+
+  // Fallback to browser print for failed network prints
+  if (kitchenContent && !kitchenPrinted) {
+    console.log('[Print] Kitchen network print failed, falling back to browser...');
+    await printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
+    kitchenPrinted = true;
     await new Promise(resolve => setTimeout(resolve, 1500));
   }
 
-  // STEP 2: Print receipt on 180 printer SECOND
-  if (printReceipt) {
-    console.log('[Print] Step 2: Sending to RECEIPT printer (180)...');
-    const receiptContent = generateReceipt(order, branding);
-    
-    let receiptPrintSuccess = false;
-    if (receiptPrinter?.ip_address) {
-      receiptPrintSuccess = await sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt (180)');
-    }
-    // Fall back to browser print if network printer failed or not configured
-    if (!receiptPrintSuccess) {
-      console.log('[Print] Receipt network print failed, falling back to browser print dialog...');
-      await printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT');
-    }
+  if (receiptContent && !receiptPrinted) {
+    console.log('[Print] Receipt network print failed, falling back to browser...');
+    await printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT');
+    receiptPrinted = true;
   }
-  
-  console.log('[Print] Print sequence complete: Kitchen → Receipt (180)');
+
+  // Build result message
+  let message = '';
+  if (kitchenPrinted && receiptPrinted) {
+    message = 'Receipt sent to Cashier and Kitchen Printers';
+  } else if (kitchenPrinted) {
+    message = 'Kitchen ticket printed (receipt printer unavailable)';
+  } else if (receiptPrinted) {
+    message = 'Receipt printed (kitchen printer unavailable)';
+  } else {
+    message = 'Printed via browser dialog';
+  }
+
+  console.log('[Print] Print sequence complete:', message);
+
+  return {
+    success: true,
+    message,
+    kitchenPrinted,
+    receiptPrinted,
+  };
 };
 
 /**
  * Quick function to print both kitchen and receipt at once
  */
-export const printDualOrder = async (order: PrintOrderData): Promise<void> => {
+export const printDualOrder = async (order: PrintOrderData): Promise<PrintResult> => {
   return printOrder(order, {
     printKitchenTicket: true,
     printReceipt: true,
