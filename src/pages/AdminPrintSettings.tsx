@@ -42,8 +42,6 @@ interface ReceiptBranding {
   footer_text: string | null;
 }
 
-const PRODUCT_CATEGORIES = ['Food', 'Bar', 'Alcohol', 'Retail', 'Dessert', 'Beverage'];
-
 const AdminPrintSettings = () => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -61,6 +59,7 @@ const AdminPrintSettings = () => {
   const [routingDialogOpen, setRoutingDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedPrinterId, setSelectedPrinterId] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
   
   // Branding state
   const [branding, setBranding] = useState<ReceiptBranding | null>(null);
@@ -108,6 +107,16 @@ const AdminPrintSettings = () => {
         ...r,
         printer_name: (r.printer_settings as any)?.name
       })) || []);
+
+      // Fetch categories from database
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('name')
+        .order('name');
+
+      if (!categoriesError && categoriesData) {
+        setCategories(categoriesData.map(c => c.name));
+      }
 
       // Fetch branding
       const { data: brandingData, error: brandingError } = await supabase
@@ -693,7 +702,7 @@ const AdminPrintSettings = () => {
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRODUCT_CATEGORIES.map(cat => (
+                  {categories.map(cat => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>
