@@ -252,40 +252,14 @@ const POS = () => {
     [] // Default value to prevent crashes
   );
 
-  // Redirect if not authenticated or doesn't have cashier/waiter/admin role
-  if (!user) return <Navigate to="/auth" />;
-  const hasAccess = profile?.roles?.some(r => ['cashier', 'waiter', 'admin'].includes(r));
-  if (!hasAccess) return <Navigate to="/auth" />;
-
-  // Show database error UI
-  if (dbError) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle className="text-destructive">Database Error</CardTitle>
-            <CardDescription>{dbError}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              The local database may be corrupted. Click below to reset it and reload the page.
-            </p>
-            <Button onClick={resetDatabase} variant="destructive" className="w-full">
-              Reset Database
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Categorize products
+  // Categorize products helper
   const getCategoryName = (categoryId: string | null) => {
     if (!categoryId) return 'Uncategorized';
     const cat = categories.find(c => c.id === categoryId);
     return cat?.name || 'Uncategorized';
   };
 
+  // IMPORTANT: useMemo must be called before any early returns to avoid hooks order issues
   const categorizedProducts = useMemo(() => {
     if (!products) return [];
     
@@ -326,6 +300,33 @@ const POS = () => {
 
     return sortedCategories;
   }, [products, categories, searchQuery]);
+
+  // Redirect if not authenticated or doesn't have cashier/waiter/admin role
+  if (!user) return <Navigate to="/auth" />;
+  const hasAccess = profile?.roles?.some(r => ['cashier', 'waiter', 'admin'].includes(r));
+  if (!hasAccess) return <Navigate to="/auth" />;
+
+  // Show database error UI
+  if (dbError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-destructive">Database Error</CardTitle>
+            <CardDescription>{dbError}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The local database may be corrupted. Click below to reset it and reload the page.
+            </p>
+            <Button onClick={resetDatabase} variant="destructive" className="w-full">
+              Reset Database
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const openCustomization = (product: LocalProduct) => {
     if (isLocked) {
