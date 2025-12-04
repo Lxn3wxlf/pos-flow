@@ -611,7 +611,7 @@ export const printOrder = async (
  */
 export const printDualOrder = async (order: PrintOrderData): Promise<void> => {
   return printOrder(order, {
-    printKitchenTicket: true,
+    printKitchenTicket: false,
     printReceipt: true,
     receiptCopies: 1
   });
