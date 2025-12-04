@@ -35,6 +35,7 @@ interface CartItem {
 
 // Menu category order matching physical menu
 const MENU_CATEGORY_ORDER = [
+  'Midweek Specials',
   'Combos',
   'Family Meal',
   'Kids',
@@ -694,16 +695,27 @@ const POS = () => {
                 </div>
               ) : (
                 <div className="space-y-6 max-h-[60vh] overflow-y-auto">
-                  {categorizedProducts.map(({ category, items }) => (
-                    <div key={category}>
-                      <h3 className="font-bold text-sm text-blue-800 dark:text-blue-100 mb-2 sticky top-0 bg-blue-100 dark:bg-blue-900/50 py-2 px-3 rounded-md uppercase tracking-wide">{category}</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {items.map(product => (
-                          <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
-                        ))}
+                  {categorizedProducts.map(({ category, items }) => {
+                    const isSpecial = category === 'Midweek Specials';
+                    return (
+                      <div key={category}>
+                        <h3 className={`font-bold text-sm mb-2 sticky top-0 py-2 px-3 rounded-md uppercase tracking-wide ${
+                          isSpecial 
+                            ? 'text-amber-900 dark:text-amber-100 bg-gradient-to-r from-amber-200 to-orange-200 dark:from-amber-900/60 dark:to-orange-900/60 border border-amber-300 dark:border-amber-700' 
+                            : 'text-blue-800 dark:text-blue-100 bg-blue-100 dark:bg-blue-900/50'
+                        }`}>
+                          {isSpecial && '⭐ '}
+                          {category}
+                          {isSpecial && ' ⭐'}
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {items.map(product => (
+                            <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {categorizedProducts.length === 0 && (
                     <p className="text-center text-muted-foreground py-8">No products found</p>
