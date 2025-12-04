@@ -48,7 +48,6 @@ const MENU_CATEGORY_ORDER = [
   'Burgers',
   'Classic Meals',
   'Grill & Platters',
-  'Curry & Bunny',
   'Sides & Extras',
   'Appetizers',
   'Desserts',
