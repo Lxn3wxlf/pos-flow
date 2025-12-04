@@ -506,53 +506,43 @@ export const printOrder = async (
   const kitchenItems = filterKitchenItems(order.items, routes, printers);
   const hasKitchenItems = kitchenItems.length > 0;
 
-  // Check if we have configured printers - sorted by print order
-  const kitchenPrinter = printers.find(p => p.printer_type === 'kitchen');
-  const barPrinter = printers.find(p => p.printer_type === 'bar');
-  const receiptPrinter = printers.find(p => p.printer_type === 'receipt');
-
-  console.log('[Print] Starting sequential print (kitchen first, then receipt):', {
+  console.log('[Print] Starting combined print job (kitchen + receipt in one dialog):', {
     kitchenItems: kitchenItems.length,
-    hasKitchenPrinter: !!kitchenPrinter,
-    hasReceiptPrinter: !!receiptPrinter,
-    paperSize: `${paperSize.widthMm}mm x ${paperSize.heightMm}mm (printable: ${paperSize.printableWidthMm}mm)`
+    receiptCopies,
+    paperSize: `${paperSize.widthMm}mm x ${paperSize.heightMm}mm`
   });
 
-  // STEP 1: Print kitchen ticket FIRST (print order 1)
+  // Build combined content: Kitchen ticket first, then receipt copies
+  const pages: string[] = [];
+
+  // Page 1: Kitchen ticket (if applicable)
   if (printKitchenTicket && hasKitchenItems) {
-    console.log('[Print] Step 1: Printing kitchen ticket...');
     const kitchenContent = generateKitchenTicket(order, kitchenItems);
-    
-    if (kitchenPrinter) {
-      const sent = await sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent);
-      if (!sent) {
-        await printToBrowser(kitchenContent, 1, paperSize, 'Kitchen Order');
-      }
-    } else {
-      await printToBrowser(kitchenContent, 1, paperSize, 'Kitchen Order');
-    }
-    
-    // Wait for kitchen print dialog to close before showing receipt
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('[Print] Kitchen ticket complete, proceeding to receipt...');
+    pages.push(kitchenContent);
   }
 
-  // STEP 2: Print receipt SECOND (print order 180)
+  // Pages 2+: Receipt copies
   if (printReceipt) {
-    console.log('[Print] Step 2: Printing receipt (order 180)...');
     const receiptContent = generateReceipt(order, branding);
-    
-    if (receiptPrinter) {
-      const sent = await sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent);
-      if (!sent) {
-        await printToBrowser(receiptContent, receiptCopies, paperSize, 'Customer Receipt');
-      }
-    } else {
-      await printToBrowser(receiptContent, receiptCopies, paperSize, 'Customer Receipt');
+    for (let i = 0; i < receiptCopies; i++) {
+      pages.push(receiptContent);
     }
   }
+
+  if (pages.length === 0) {
+    console.log('[Print] No pages to print');
+    return;
+  }
+
+  // Combine all pages into single print job
+  const combinedContent = pages.map((page, index) => 
+    `<div class="print-page" ${index > 0 ? 'style="page-break-before: always;"' : ''}>${page}</div>`
+  ).join('');
+
+  // Single print dialog for all pages
+  await printToBrowser(combinedContent, 1, paperSize, 'Order & Receipt');
   
-  console.log('[Print] Sequential printing complete');
+  console.log('[Print] Combined print job sent:', pages.length, 'pages');
 };
 
 /**
