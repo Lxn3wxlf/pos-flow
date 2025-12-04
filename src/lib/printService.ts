@@ -363,66 +363,111 @@ export const generateReceipt = (
 };
 
 /**
- * Print to browser (creates hidden iframe and triggers print)
+ * Print to browser using a new window for better compatibility
  * Uses configured paper size (default 80mm x 210mm)
  */
 export const printToBrowser = (
   content: string, 
   copies: number = 1,
-  paperSize: PaperSize = DEFAULT_PAPER_SIZE
+  paperSize: PaperSize = DEFAULT_PAPER_SIZE,
+  title: string = 'Print'
 ): Promise<void> => {
   return new Promise((resolve) => {
-    let printed = 0;
+    // Create a new window for printing - more reliable than hidden iframe
+    const printWindow = window.open('', '_blank', 'width=400,height=600,scrollbars=yes');
     
-    for (let i = 0; i < copies; i++) {
-      const printFrame = document.createElement('iframe');
-      printFrame.style.position = 'absolute';
-      printFrame.style.top = '-10000px';
-      printFrame.style.left = '-10000px';
-      document.body.appendChild(printFrame);
-
-      const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
-      if (frameDoc) {
-        frameDoc.open();
-        frameDoc.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Print</title>
-            <style>
-              @media print {
-                body { margin: 0; padding: 0; }
-                @page { 
-                  margin: 0; 
-                  size: ${paperSize.widthMm}mm ${paperSize.heightMm}mm;
-                }
-              }
-              body {
-                width: ${paperSize.printableWidthMm}mm;
-                max-width: ${paperSize.printableWidthMm}mm;
-              }
-            </style>
-          </head>
-          <body>${content}</body>
-          </html>
-        `);
-        frameDoc.close();
-
-        setTimeout(() => {
-          printFrame.contentWindow?.print();
-          setTimeout(() => {
-            document.body.removeChild(printFrame);
-            printed++;
-            if (printed >= copies) {
-              resolve();
-            }
-          }, 1000);
-        }, 250 + (i * 500)); // Stagger prints
-      }
+    if (!printWindow) {
+      console.error('[Print] Could not open print window - popup may be blocked');
+      resolve();
+      return;
     }
-    
-    // Fallback resolve if no frames created
-    if (copies === 0) resolve();
+
+    const fullContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          @media print {
+            body { margin: 0; padding: 0; }
+            @page { 
+              margin: 0; 
+              size: ${paperSize.widthMm}mm ${paperSize.heightMm}mm;
+            }
+            .no-print { display: none !important; }
+          }
+          @media screen {
+            body { 
+              background: #f5f5f5; 
+              display: flex; 
+              flex-direction: column;
+              align-items: center;
+              padding: 20px;
+              font-family: system-ui, sans-serif;
+            }
+            .print-content {
+              background: white;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              margin-bottom: 20px;
+            }
+            .print-actions {
+              position: fixed;
+              bottom: 20px;
+              display: flex;
+              gap: 10px;
+            }
+            .print-btn {
+              padding: 12px 24px;
+              font-size: 16px;
+              cursor: pointer;
+              border: none;
+              border-radius: 6px;
+            }
+            .print-btn-primary {
+              background: #2563eb;
+              color: white;
+            }
+            .print-btn-secondary {
+              background: #e5e7eb;
+              color: #374151;
+            }
+          }
+          body {
+            width: ${paperSize.printableWidthMm}mm;
+            max-width: ${paperSize.printableWidthMm}mm;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-content">
+          ${content}
+        </div>
+        ${copies > 1 ? `<p class="no-print" style="color: #666; font-size: 12px;">Note: ${copies} copies will be printed</p>` : ''}
+        <div class="print-actions no-print">
+          <button class="print-btn print-btn-primary" onclick="window.print()">Print</button>
+          <button class="print-btn print-btn-secondary" onclick="window.close()">Close</button>
+        </div>
+        <script>
+          // Auto-trigger print after a short delay
+          setTimeout(() => {
+            window.print();
+          }, 500);
+          
+          // Close window after print (with delay to handle print dialog)
+          window.onafterprint = function() {
+            setTimeout(() => window.close(), 500);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(fullContent);
+    printWindow.document.close();
+
+    // Resolve after giving time for print dialog
+    setTimeout(resolve, 2000);
   });
 };
 
@@ -490,10 +535,10 @@ export const printOrder = async (
     if (kitchenPrinter) {
       const sent = await sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent);
       if (!sent) {
-        await printToBrowser(kitchenContent, 1, paperSize);
+        await printToBrowser(kitchenContent, 1, paperSize, 'Kitchen Order');
       }
     } else {
-      await printToBrowser(kitchenContent, 1, paperSize);
+      await printToBrowser(kitchenContent, 1, paperSize, 'Kitchen Order');
     }
     
     // Small delay between kitchen and receipt to ensure order
@@ -508,10 +553,10 @@ export const printOrder = async (
     if (receiptPrinter) {
       const sent = await sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent);
       if (!sent) {
-        await printToBrowser(receiptContent, receiptCopies, paperSize);
+        await printToBrowser(receiptContent, receiptCopies, paperSize, 'Customer Receipt');
       }
     } else {
-      await printToBrowser(receiptContent, receiptCopies, paperSize);
+      await printToBrowser(receiptContent, receiptCopies, paperSize, 'Customer Receipt');
     }
   }
   
