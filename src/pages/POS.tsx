@@ -633,7 +633,7 @@ const POS = () => {
                 <div className="space-y-6 max-h-[60vh] overflow-y-auto">
                   {categorizedProducts.map(({ category, items }) => (
                     <div key={category}>
-                      <h3 className="font-semibold text-sm text-muted-foreground mb-2 sticky top-0 bg-background py-1 uppercase tracking-wide">{category}</h3>
+                      <h3 className="font-bold text-sm text-primary-foreground mb-2 sticky top-0 bg-primary py-2 px-3 rounded-md uppercase tracking-wide">{category}</h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {items.map(product => (
                           <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
