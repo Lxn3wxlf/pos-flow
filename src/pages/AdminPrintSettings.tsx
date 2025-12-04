@@ -11,10 +11,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Pencil, Trash2, Printer, Route, Image, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Printer, Route, Image, Upload, Usb, RefreshCw, CheckCircle, XCircle, Play } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import logo from '@/assets/casbah-logo.svg';
+import { 
+  initQZTray, 
+  isQZConnected, 
+  listPrinters, 
+  fetchQZPrinterConfig, 
+  saveQZPrinterConfig, 
+  testPrint,
+  QZPrinterConfig 
+} from '@/lib/qzTray';
 
 interface PrinterSetting {
   id: string;
@@ -73,6 +83,14 @@ const AdminPrintSettings = () => {
   });
   const [uploading, setUploading] = useState(false);
   
+  // QZ Tray state
+  const [qzConnected, setQzConnected] = useState(false);
+  const [qzPrinters, setQzPrinters] = useState<string[]>([]);
+  const [qzConfig, setQzConfig] = useState<QZPrinterConfig>({ cashier: null, kitchen: null });
+  const [qzLoading, setQzLoading] = useState(false);
+  const [qzSelectedCashier, setQzSelectedCashier] = useState('');
+  const [qzSelectedKitchen, setQzSelectedKitchen] = useState('');
+  
   const [loading, setLoading] = useState(true);
 
   if (!user) return <Navigate to="/auth" />;
@@ -80,7 +98,64 @@ const AdminPrintSettings = () => {
 
   useEffect(() => {
     fetchData();
+    initQZConnection();
   }, []);
+
+  const initQZConnection = async () => {
+    const connected = await initQZTray();
+    setQzConnected(connected);
+    if (connected) {
+      await refreshQZPrinters();
+      await loadQZConfig();
+    }
+  };
+
+  const refreshQZPrinters = async () => {
+    setQzLoading(true);
+    try {
+      const printerList = await listPrinters();
+      setQzPrinters(printerList);
+    } catch (err) {
+      console.error('Failed to list QZ printers:', err);
+    } finally {
+      setQzLoading(false);
+    }
+  };
+
+  const loadQZConfig = async () => {
+    const config = await fetchQZPrinterConfig();
+    setQzConfig(config);
+    setQzSelectedCashier(config.cashier || '');
+    setQzSelectedKitchen(config.kitchen || '');
+  };
+
+  const handleSaveQZPrinter = async (label: 'cashier' | 'kitchen', printerName: string) => {
+    if (!printerName) {
+      toast.error('Please select a printer');
+      return;
+    }
+    const success = await saveQZPrinterConfig(label, printerName);
+    if (success) {
+      toast.success(`${label === 'cashier' ? 'Cashier' : 'Kitchen'} printer saved`);
+      await loadQZConfig();
+    } else {
+      toast.error('Failed to save printer configuration');
+    }
+  };
+
+  const handleTestQZPrint = async (printerName: string) => {
+    if (!printerName) {
+      toast.error('No printer selected');
+      return;
+    }
+    toast.info('Sending test print...');
+    const success = await testPrint(printerName);
+    if (success) {
+      toast.success('Test print sent successfully');
+    } else {
+      toast.error('Test print failed');
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -375,11 +450,15 @@ const AdminPrintSettings = () => {
       </AppHeader>
 
       <div className="p-6">
-        <Tabs defaultValue="printers" className="space-y-6">
+        <Tabs defaultValue="qztray" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="qztray" className="gap-2">
+              <Usb className="h-4 w-4" />
+              QZ Tray
+            </TabsTrigger>
             <TabsTrigger value="printers" className="gap-2">
               <Printer className="h-4 w-4" />
-              Printers
+              Network Printers
             </TabsTrigger>
             <TabsTrigger value="routing" className="gap-2">
               <Route className="h-4 w-4" />
@@ -635,6 +714,179 @@ const AdminPrintSettings = () => {
                 <Button onClick={handleSaveBranding}>
                   Save Branding
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* QZ Tray Tab */}
+          <TabsContent value="qztray">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Usb className="h-5 w-5" />
+                  QZ Tray Configuration
+                </CardTitle>
+                <CardDescription>
+                  Silent ESC/POS printing via QZ Tray. Prints directly to thermal printers without browser dialogs.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Connection Status */}
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    {qzConnected ? (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
+                    <div>
+                      <p className="font-medium">
+                        {qzConnected ? 'Connected to QZ Tray' : 'QZ Tray Not Connected'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {qzConnected 
+                          ? 'Ready for silent printing' 
+                          : 'Install and run QZ Tray from qz.io'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={initQZConnection}
+                    disabled={qzLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${qzLoading ? 'animate-spin' : ''}`} />
+                    {qzConnected ? 'Refresh' : 'Connect'}
+                  </Button>
+                </div>
+
+                {!qzConnected && (
+                  <Alert>
+                    <AlertDescription>
+                      <strong>To enable silent printing:</strong>
+                      <ol className="list-decimal ml-4 mt-2 space-y-1 text-sm">
+                        <li>Download and install QZ Tray from <a href="https://qz.io" target="_blank" rel="noopener noreferrer" className="text-primary underline">qz.io</a></li>
+                        <li>Run QZ Tray on this computer</li>
+                        <li>Click "Connect" above</li>
+                        <li>When prompted, allow this site to access QZ Tray</li>
+                      </ol>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {qzConnected && (
+                  <>
+                    {/* Printer Detection */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-base font-medium">Detected Printers</Label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={refreshQZPrinters}
+                          disabled={qzLoading}
+                        >
+                          <RefreshCw className={`h-4 w-4 mr-2 ${qzLoading ? 'animate-spin' : ''}`} />
+                          Refresh
+                        </Button>
+                      </div>
+                      {qzPrinters.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No printers detected. Make sure printers are installed on this computer.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {qzPrinters.map(printer => (
+                            <Badge key={printer} variant="secondary">{printer}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cashier Printer Selection */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-3 p-4 border rounded-lg">
+                        <Label className="text-base font-medium">Cashier Printer (Customer Receipt)</Label>
+                        <Select value={qzSelectedCashier} onValueChange={setQzSelectedCashier}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select cashier printer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {qzPrinters.map(printer => (
+                              <SelectItem key={printer} value={printer}>{printer}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSaveQZPrinter('cashier', qzSelectedCashier)}
+                            disabled={!qzSelectedCashier}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleTestQZPrint(qzSelectedCashier)}
+                            disabled={!qzSelectedCashier}
+                          >
+                            <Play className="h-4 w-4 mr-1" />
+                            Test
+                          </Button>
+                        </div>
+                        {qzConfig.cashier && (
+                          <p className="text-sm text-muted-foreground">
+                            Current: <span className="font-medium">{qzConfig.cashier}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Kitchen Printer Selection */}
+                      <div className="space-y-3 p-4 border rounded-lg">
+                        <Label className="text-base font-medium">Kitchen Printer (Order Slip)</Label>
+                        <Select value={qzSelectedKitchen} onValueChange={setQzSelectedKitchen}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select kitchen printer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {qzPrinters.map(printer => (
+                              <SelectItem key={printer} value={printer}>{printer}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSaveQZPrinter('kitchen', qzSelectedKitchen)}
+                            disabled={!qzSelectedKitchen}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleTestQZPrint(qzSelectedKitchen)}
+                            disabled={!qzSelectedKitchen}
+                          >
+                            <Play className="h-4 w-4 mr-1" />
+                            Test
+                          </Button>
+                        </div>
+                        {qzConfig.kitchen && (
+                          <p className="text-sm text-muted-foreground">
+                            Current: <span className="font-medium">{qzConfig.kitchen}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <Alert>
+                      <AlertDescription className="text-sm">
+                        <strong>Silent Printing:</strong> Once configured, all completed transactions will automatically print to both printers without any dialog boxes. For this to work, you must allow site access in QZ Tray certificates settings.
+                      </AlertDescription>
+                    </Alert>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
