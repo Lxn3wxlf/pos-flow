@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Delete } from 'lucide-react';
@@ -14,6 +14,12 @@ interface NumberPadDialogProps {
 const NumberPadDialog = ({ open, onClose, onConfirm, title = 'Enter Amount', initialValue = '' }: NumberPadDialogProps) => {
   const [value, setValue] = useState(initialValue);
 
+  // Sync value when dialog opens
+  useEffect(() => {
+    if (open) {
+      setValue(initialValue);
+    }
+  }, [open, initialValue]);
   const handlePress = (digit: string) => {
     if (digit === '.' && value.includes('.')) return;
     if (digit === '.' && value === '') {
