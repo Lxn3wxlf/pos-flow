@@ -565,16 +565,11 @@ export const printOrder = async (
     console.log('[Print] Step 1: Sending to KITCHEN printer...');
     const kitchenContent = generateKitchenTicket(order, kitchenItems);
     
-    let kitchenPrintSuccess = false;
     if (kitchenPrinter?.ip_address) {
-      kitchenPrintSuccess = await sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen');
+      await sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen');
     }
-    
-    // Fall back to browser print if network printer failed or not configured
-    if (!kitchenPrintSuccess) {
-      console.log('[Print] Kitchen network print failed, falling back to browser print dialog...');
-      await printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
-    }
+    // Always show browser print dialog for testing
+    await printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
     
     // Wait before printing receipt
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -585,16 +580,11 @@ export const printOrder = async (
     console.log('[Print] Step 2: Sending to RECEIPT printer (180)...');
     const receiptContent = generateReceipt(order, branding);
     
-    let receiptPrintSuccess = false;
     if (receiptPrinter?.ip_address) {
-      receiptPrintSuccess = await sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt (180)');
+      await sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt (180)');
     }
-    
-    // Fall back to browser print if network printer failed or not configured
-    if (!receiptPrintSuccess) {
-      console.log('[Print] Receipt network print failed, falling back to browser print dialog...');
-      await printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT');
-    }
+    // Always show browser print dialog for testing
+    await printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT');
   }
   
   console.log('[Print] Print sequence complete: Kitchen → Receipt (180)');
