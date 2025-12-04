@@ -522,26 +522,52 @@ const AdminPrintSettings = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Logo Upload */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Label>Receipt Logo</Label>
-                  <div className="flex items-center gap-4">
-                    {brandingForm.logo_url && (
-                      <img 
-                        src={brandingForm.logo_url} 
-                        alt="Receipt Logo" 
-                        className="h-16 w-auto border rounded p-1"
-                      />
-                    )}
-                    <div>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        disabled={uploading}
-                        className="max-w-xs"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Recommended: 200x60px monochrome image for best print quality
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="border rounded-lg p-3 bg-muted/30">
+                      {brandingForm.logo_url ? (
+                        <img 
+                          src={brandingForm.logo_url} 
+                          alt="Custom Receipt Logo" 
+                          className="h-20 w-auto object-contain"
+                        />
+                      ) : (
+                        <img 
+                          src="/casbah-logo-print.jpg" 
+                          alt="Default Casbah Logo" 
+                          className="h-20 w-auto object-contain"
+                        />
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        {brandingForm.logo_url ? 'Custom logo' : 'Default logo'}
+                      </p>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          disabled={uploading}
+                          className="max-w-xs"
+                        />
+                        {uploading && (
+                          <span className="text-sm text-muted-foreground animate-pulse">Uploading...</span>
+                        )}
+                      </div>
+                      {brandingForm.logo_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setBrandingForm(prev => ({ ...prev, logo_url: '' }))}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove custom logo (use default)
+                        </Button>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Recommended: PNG or JPG, max 200x80px for best print quality on 80mm paper
                       </p>
                     </div>
                   </div>
