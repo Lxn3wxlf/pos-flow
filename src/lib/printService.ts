@@ -97,7 +97,36 @@ const CACHE_DURATION = 60000; // 1 minute cache
 
 // Fallback categories for kitchen routing when no rules configured
 const DEFAULT_KITCHEN_CATEGORIES = [
-  'Food', 'Hot Drinks', 'Coffee', 'Tea', 'Alcohol', 'Beverages', 'Bar',
+  // Food categories
+  'Appetizers',
+  'Burgers & Sandwiches',
+  'Casbah Famous Sandwiches',
+  'Classic Meals',
+  'Combos',
+  'Curry & Bunny',
+  'Desserts',
+  'Family Meal',
+  'Grill & Platters',
+  'Kids',
+  'Loaded Fries',
+  'Main Course',
+  'Mexican',
+  'Midweek Specials',
+  'Mr Beasley',
+  'On The Go Meals',
+  'Sandwiches',
+  'Sides & Extras',
+  // Beverage categories (for bar/kitchen)
+  'Coffee',
+  'Cold Coffee',
+  'Tea',
+  'Milk Shake',
+  'Freezos',
+  'Assorted Drinks',
+  'Beverages',
+  'Drinks',
+  // Fallback generic names
+  'Food', 'Hot Drinks', 'Alcohol', 'Bar',
   'Mains', 'Starters', 'Grills', 'Platters', 'Burgers', 'Sides', 'Dessert'
 ];
 
