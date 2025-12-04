@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package, Coffee, UtensilsCrossed, IceCream } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
@@ -30,9 +30,35 @@ interface CartItem {
   price_adjustment?: number;
 }
 
-// Category classifications
-const HOT_DRINK_CATEGORIES = ['Coffee', 'Tea'];
-const COLD_DRINK_CATEGORIES = ['Cold Coffee', 'Freezos', 'Milk Shake', 'Assorted Drinks', 'Beverages', 'Drinks'];
+// Menu category order matching physical menu
+const MENU_CATEGORY_ORDER = [
+  'Combos',
+  'Family Meal',
+  'Kids',
+  'Mexican',
+  'Mr Beasley',
+  'On The Go Meals',
+  'Loaded Fries',
+  'Casbah Famous Sandwiches',
+  'Sandwiches',
+  'Burgers & Sandwiches',
+  'Burgers',
+  'Classic Meals',
+  'Grill & Platters',
+  'Curry & Bunny',
+  'Sides & Extras',
+  'Appetizers',
+  'Desserts',
+  // Drinks at the end
+  'Coffee',
+  'Tea',
+  'Cold Coffee',
+  'Milk Shake',
+  'Freezos',
+  'Assorted Drinks',
+  'Beverages',
+  'Drinks',
+];
 
 // Product Button Component
 interface ProductButtonProps {
@@ -112,7 +138,6 @@ const POS = () => {
   const [modifierDialogOpen, setModifierDialogOpen] = useState(false);
   const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<LocalProduct | null>(null);
   const [hasModifiers, setHasModifiers] = useState<Set<string>>(new Set());
-  const [activeSection, setActiveSection] = useState<'food' | 'hot' | 'cold'>('food');
   const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
 
   // Check for pending EOD on mount and periodically
@@ -197,11 +222,9 @@ const POS = () => {
   };
 
   const categorizedProducts = useMemo(() => {
-    if (!products) return { food: {}, hotDrinks: {}, coldDrinks: {} };
+    if (!products) return [];
     
-    const food: Record<string, LocalProduct[]> = {};
-    const hotDrinks: Record<string, LocalProduct[]> = {};
-    const coldDrinks: Record<string, LocalProduct[]> = {};
+    const grouped: Record<string, LocalProduct[]> = {};
 
     products.forEach(product => {
       const categoryName = getCategoryName(product.category_id);
@@ -214,19 +237,29 @@ const POS = () => {
         if (!matches) return;
       }
 
-      if (HOT_DRINK_CATEGORIES.includes(categoryName)) {
-        if (!hotDrinks[categoryName]) hotDrinks[categoryName] = [];
-        hotDrinks[categoryName].push(product);
-      } else if (COLD_DRINK_CATEGORIES.includes(categoryName)) {
-        if (!coldDrinks[categoryName]) coldDrinks[categoryName] = [];
-        coldDrinks[categoryName].push(product);
-      } else {
-        if (!food[categoryName]) food[categoryName] = [];
-        food[categoryName].push(product);
+      if (!grouped[categoryName]) grouped[categoryName] = [];
+      grouped[categoryName].push(product);
+    });
+
+    // Sort categories by the defined order
+    const sortedCategories: { category: string; items: LocalProduct[] }[] = [];
+    
+    // First add categories in defined order
+    MENU_CATEGORY_ORDER.forEach(cat => {
+      if (grouped[cat] && grouped[cat].length > 0) {
+        sortedCategories.push({ category: cat, items: grouped[cat] });
+        delete grouped[cat];
+      }
+    });
+    
+    // Then add any remaining categories not in the order list
+    Object.entries(grouped).forEach(([cat, items]) => {
+      if (items.length > 0) {
+        sortedCategories.push({ category: cat, items });
       }
     });
 
-    return { food, hotDrinks, coldDrinks };
+    return sortedCategories;
   }, [products, categories, searchQuery]);
 
   const openCustomization = (product: LocalProduct) => {
@@ -534,40 +567,6 @@ const POS = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Section Tabs */}
-              <div className="flex gap-2 border-b pb-3">
-                <Button
-                  variant={activeSection === 'food' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setActiveSection('food')}
-                  disabled={isLocked}
-                  className="gap-2"
-                >
-                  <UtensilsCrossed className="h-4 w-4" />
-                  Food
-                </Button>
-                <Button
-                  variant={activeSection === 'hot' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setActiveSection('hot')}
-                  disabled={isLocked}
-                  className="gap-2"
-                >
-                  <Coffee className="h-4 w-4" />
-                  Hot Drinks
-                </Button>
-                <Button
-                  variant={activeSection === 'cold' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setActiveSection('cold')}
-                  disabled={isLocked}
-                  className="gap-2"
-                >
-                  <IceCream className="h-4 w-4" />
-                  Cold Drinks
-                </Button>
-              </div>
-
               {isLocked ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <p className="text-lg font-medium">POS Locked</p>
@@ -575,31 +574,9 @@ const POS = () => {
                 </div>
               ) : (
                 <div className="space-y-6 max-h-[60vh] overflow-y-auto">
-                  {activeSection === 'food' && Object.entries(categorizedProducts.food).map(([category, items]) => (
+                  {categorizedProducts.map(({ category, items }) => (
                     <div key={category}>
-                      <h3 className="font-semibold text-sm text-muted-foreground mb-2 sticky top-0 bg-background py-1">{category}</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {items.map(product => (
-                          <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {activeSection === 'hot' && Object.entries(categorizedProducts.hotDrinks).map(([category, items]) => (
-                    <div key={category}>
-                      <h3 className="font-semibold text-sm text-muted-foreground mb-2 sticky top-0 bg-background py-1">{category}</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {items.map(product => (
-                          <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {activeSection === 'cold' && Object.entries(categorizedProducts.coldDrinks).map(([category, items]) => (
-                    <div key={category}>
-                      <h3 className="font-semibold text-sm text-muted-foreground mb-2 sticky top-0 bg-background py-1">{category}</h3>
+                      <h3 className="font-semibold text-sm text-muted-foreground mb-2 sticky top-0 bg-background py-1 uppercase tracking-wide">{category}</h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {items.map(product => (
                           <ProductButton key={product.id} product={product} onAdd={openCustomization} hasModifiers={hasModifiers} isLocked={isLocked} cart={cart} setCart={setCart} />
@@ -608,9 +585,7 @@ const POS = () => {
                     </div>
                   ))}
 
-                  {((activeSection === 'food' && Object.keys(categorizedProducts.food).length === 0) ||
-                    (activeSection === 'hot' && Object.keys(categorizedProducts.hotDrinks).length === 0) ||
-                    (activeSection === 'cold' && Object.keys(categorizedProducts.coldDrinks).length === 0)) && (
+                  {categorizedProducts.length === 0 && (
                     <p className="text-center text-muted-foreground py-8">No products found</p>
                   )}
                 </div>
