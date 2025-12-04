@@ -131,6 +131,7 @@ const POS = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [cashReceived, setCashReceived] = useState<string>('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isEODOpen, setIsEODOpen] = useState(false);
   const [hasPendingEOD, setHasPendingEOD] = useState(false);
@@ -506,6 +507,7 @@ const POS = () => {
       // Clear cart
       setCart([]);
       setDiscountAmount(0);
+      setCashReceived('');
       setPaymentMethod('cash');
 
       // Print receipt
@@ -746,7 +748,7 @@ const POS = () => {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Payment Method</label>
-                    <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={isLocked}>
+                    <Select value={paymentMethod} onValueChange={(val) => { setPaymentMethod(val); setCashReceived(''); }} disabled={isLocked}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -759,6 +761,39 @@ const POS = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {paymentMethod === 'cash' && (
+                    <div className="space-y-2 p-3 bg-muted rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-medium">Cash Received:</label>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm">R</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={cashReceived}
+                            onChange={(e) => setCashReceived(e.target.value)}
+                            placeholder="0.00"
+                            className="w-28 h-8"
+                            disabled={isLocked}
+                          />
+                        </div>
+                      </div>
+                      {cashReceived && parseFloat(cashReceived) >= totals.total && (
+                        <div className="flex justify-between items-center text-lg font-bold text-green-600 dark:text-green-400">
+                          <span>Change:</span>
+                          <span>R{(parseFloat(cashReceived) - totals.total).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {cashReceived && parseFloat(cashReceived) > 0 && parseFloat(cashReceived) < totals.total && (
+                        <div className="flex justify-between items-center text-sm text-destructive">
+                          <span>Short by:</span>
+                          <span>R{(totals.total - parseFloat(cashReceived)).toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <Button 
                     className="w-full" 
