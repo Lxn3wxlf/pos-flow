@@ -213,24 +213,13 @@ export const generateKitchenTicket = (order: PrintOrderData, kitchenItems?: Prin
   
   if (items.length === 0) return '';
 
-  const orderTypeDisplay = order.orderType.replace('_', ' ').toUpperCase();
-  const timestamp = order.timestamp.toLocaleTimeString('en-ZA', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
-
   return `
     <div style="font-family: 'Courier New', monospace; width: 280px; padding: 10px; background: white; color: black;">
-      <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
-        <img src="${DEFAULT_LOGO_URL}" alt="Casbah Logo" style="max-width: 180px; max-height: 70px; margin-bottom: 8px; filter: grayscale(100%) contrast(1.2);" onerror="this.style.display='none'" />
-        <div style="font-size: 20px; font-weight: bold;">KITCHEN ORDER</div>
-        <div style="font-size: 28px; font-weight: bold; margin: 5px 0;">
+      <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 10px;">
+        <div style="font-size: 36px; font-weight: bold;">KITCHEN ORDER</div>
+        <div style="font-size: 48px; font-weight: bold; margin: 10px 0;">
           #${order.orderNumber.split('-').pop()?.toUpperCase()}
         </div>
-        <div style="font-size: 16px;">${orderTypeDisplay}</div>
-        ${order.tableName ? `<div style="font-size: 18px; font-weight: bold;">TABLE: ${order.tableName}</div>` : ''}
-        ${order.customerName ? `<div style="font-size: 14px;">Customer: ${order.customerName}</div>` : ''}
-        <div style="font-size: 12px; color: #666;">${timestamp}</div>
       </div>
       
       <div style="margin-bottom: 10px;">
