@@ -423,7 +423,26 @@ const POS = () => {
         }
       }
 
-      // Save sale items
+      // Create order for kitchen display
+      const { data: orderNumberData } = await supabase.rpc('generate_order_number');
+      const orderNumber = orderNumberData || `ORD-${saleId.slice(0, 6).toUpperCase()}`;
+      
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          order_type: 'takeout',
+          status: 'pending',
+          discount_amount: discountAmount,
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('Error creating order:', orderError);
+      }
+
+      // Save sale items and create order items for kitchen
       for (const item of cart) {
         const itemPrice = getItemPrice(item);
         await db.sale_items.add({
@@ -438,6 +457,40 @@ const POS = () => {
           tax_rate: item.product.tax_rate,
           line_total: itemPrice * item.qty
         });
+
+        // Create order item for kitchen display
+        if (orderData) {
+          const orderItemInsert = {
+            order_id: orderData.id,
+            product_id: item.product.id,
+            product_name: item.product.name,
+            product_sku: item.product.sku,
+            qty: item.qty,
+            price_at_order: itemPrice,
+            cost_at_order: item.product.cost,
+            tax_rate: item.product.tax_rate,
+            line_total: itemPrice * item.qty,
+            kitchen_station: (item.product.kitchen_station || 'general') as 'grill' | 'fryer' | 'salad' | 'dessert' | 'bar' | 'general',
+            weight_amount: item.weight_amount,
+            weight_unit: item.weight_unit,
+          };
+          const { data: orderItemData, error: orderItemError } = await supabase
+            .from('order_items')
+            .insert(orderItemInsert)
+            .select()
+            .single();
+
+          // Add modifiers to order item
+          if (orderItemData && item.modifiers && item.modifiers.length > 0) {
+            const modifierInserts = item.modifiers.map(mod => ({
+              order_item_id: orderItemData.id,
+              modifier_id: mod.modifier_id,
+              modifier_name: mod.modifier_name,
+              price_adjustment: mod.price_adjustment,
+            }));
+            await supabase.from('order_item_modifiers').insert(modifierInserts);
+          }
+        }
 
         // Update local stock
         const currentProduct = await db.products.get(item.product.id);
