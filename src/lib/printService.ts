@@ -39,6 +39,7 @@ interface PrinterSetting {
   ip_address: string;
   printer_type: 'kitchen' | 'receipt' | 'bar';
   is_active: boolean;
+  print_order?: number; // Lower numbers print first
 }
 
 interface RoutingRule {
@@ -54,6 +55,38 @@ interface ReceiptBranding {
   phone: string | null;
   footer_text: string | null;
 }
+
+// Paper size configuration (80mm thermal paper standard)
+export interface PaperSize {
+  name: string;
+  widthMm: number;
+  printableWidthMm: number;
+  heightMm: number;
+}
+
+export const PAPER_SIZES: Record<string, PaperSize> = {
+  '80mm': {
+    name: '80mm Standard',
+    widthMm: 80,
+    printableWidthMm: 72.1, // Actual printable width
+    heightMm: 210,
+  },
+  '58mm': {
+    name: '58mm Compact',
+    widthMm: 58,
+    printableWidthMm: 48,
+    heightMm: 210,
+  },
+};
+
+export const DEFAULT_PAPER_SIZE = PAPER_SIZES['80mm'];
+
+// Print order constants (lower = prints first)
+export const PRINT_ORDER = {
+  KITCHEN: 1,  // Kitchen prints first
+  BAR: 2,      // Bar prints second
+  RECEIPT: 180, // Receipt prints last (as per user request)
+} as const;
 
 // Cache for print settings
 let cachedPrinters: PrinterSetting[] | null = null;
@@ -320,43 +353,66 @@ export const generateReceipt = (
 
 /**
  * Print to browser (creates hidden iframe and triggers print)
+ * Uses configured paper size (default 80mm x 210mm)
  */
-export const printToBrowser = (content: string, copies: number = 1): void => {
-  for (let i = 0; i < copies; i++) {
-    const printFrame = document.createElement('iframe');
-    printFrame.style.position = 'absolute';
-    printFrame.style.top = '-10000px';
-    printFrame.style.left = '-10000px';
-    document.body.appendChild(printFrame);
+export const printToBrowser = (
+  content: string, 
+  copies: number = 1,
+  paperSize: PaperSize = DEFAULT_PAPER_SIZE
+): Promise<void> => {
+  return new Promise((resolve) => {
+    let printed = 0;
+    
+    for (let i = 0; i < copies; i++) {
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'absolute';
+      printFrame.style.top = '-10000px';
+      printFrame.style.left = '-10000px';
+      document.body.appendChild(printFrame);
 
-    const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
-    if (frameDoc) {
-      frameDoc.open();
-      frameDoc.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Print</title>
-          <style>
-            @media print {
-              body { margin: 0; padding: 0; }
-              @page { margin: 0; size: 80mm auto; }
-            }
-          </style>
-        </head>
-        <body>${content}</body>
-        </html>
-      `);
-      frameDoc.close();
+      const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
+      if (frameDoc) {
+        frameDoc.open();
+        frameDoc.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Print</title>
+            <style>
+              @media print {
+                body { margin: 0; padding: 0; }
+                @page { 
+                  margin: 0; 
+                  size: ${paperSize.widthMm}mm ${paperSize.heightMm}mm;
+                }
+              }
+              body {
+                width: ${paperSize.printableWidthMm}mm;
+                max-width: ${paperSize.printableWidthMm}mm;
+              }
+            </style>
+          </head>
+          <body>${content}</body>
+          </html>
+        `);
+        frameDoc.close();
 
-      setTimeout(() => {
-        printFrame.contentWindow?.print();
         setTimeout(() => {
-          document.body.removeChild(printFrame);
-        }, 1000);
-      }, 250 + (i * 500)); // Stagger prints
+          printFrame.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(printFrame);
+            printed++;
+            if (printed >= copies) {
+              resolve();
+            }
+          }, 1000);
+        }, 250 + (i * 500)); // Stagger prints
+      }
     }
-  }
+    
+    // Fallback resolve if no frames created
+    if (copies === 0) resolve();
+  });
 };
 
 /**
@@ -376,8 +432,9 @@ export const sendToNetworkPrinter = async (
 };
 
 /**
- * Main print function - handles automatic dual printing
- * Prints to both kitchen and receipt printers based on configured settings
+ * Main print function - handles automatic sequential printing
+ * Prints kitchen first (order 1), then receipt (order 180) based on configured settings
+ * Paper size: 80mm (72.1mm printable) x 210mm default
  */
 export const printOrder = async (
   order: PrintOrderData, 
@@ -385,12 +442,14 @@ export const printOrder = async (
     printKitchenTicket?: boolean;
     printReceipt?: boolean;
     receiptCopies?: number;
+    paperSize?: PaperSize;
   } = {}
 ): Promise<void> => {
   const {
     printKitchenTicket = true,
     printReceipt = true,
-    receiptCopies = 2
+    receiptCopies = 2,
+    paperSize = DEFAULT_PAPER_SIZE
   } = options;
 
   // Fetch configured settings
@@ -400,46 +459,52 @@ export const printOrder = async (
   const kitchenItems = filterKitchenItems(order.items, routes, printers);
   const hasKitchenItems = kitchenItems.length > 0;
 
-  // Check if we have configured printers
+  // Check if we have configured printers - sorted by print order
   const kitchenPrinter = printers.find(p => p.printer_type === 'kitchen');
+  const barPrinter = printers.find(p => p.printer_type === 'bar');
   const receiptPrinter = printers.find(p => p.printer_type === 'receipt');
 
-  console.log('[Print] Starting dual print:', {
+  console.log('[Print] Starting sequential print (kitchen first, then receipt):', {
     kitchenItems: kitchenItems.length,
     hasKitchenPrinter: !!kitchenPrinter,
-    hasReceiptPrinter: !!receiptPrinter
+    hasReceiptPrinter: !!receiptPrinter,
+    paperSize: `${paperSize.widthMm}mm x ${paperSize.heightMm}mm (printable: ${paperSize.printableWidthMm}mm)`
   });
 
-  // Print kitchen ticket
+  // STEP 1: Print kitchen ticket FIRST (print order 1)
   if (printKitchenTicket && hasKitchenItems) {
+    console.log('[Print] Step 1: Printing kitchen ticket...');
     const kitchenContent = generateKitchenTicket(order, kitchenItems);
     
     if (kitchenPrinter) {
-      // Try network printing first
       const sent = await sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent);
       if (!sent) {
-        // Fall back to browser printing
-        printToBrowser(kitchenContent, 1);
+        await printToBrowser(kitchenContent, 1, paperSize);
       }
     } else {
-      // No configured printer, use browser
-      printToBrowser(kitchenContent, 1);
+      await printToBrowser(kitchenContent, 1, paperSize);
     }
+    
+    // Small delay between kitchen and receipt to ensure order
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
-  // Print receipt
+  // STEP 2: Print receipt SECOND (print order 180)
   if (printReceipt) {
+    console.log('[Print] Step 2: Printing receipt (order 180)...');
     const receiptContent = generateReceipt(order, branding);
     
     if (receiptPrinter) {
       const sent = await sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent);
       if (!sent) {
-        printToBrowser(receiptContent, receiptCopies);
+        await printToBrowser(receiptContent, receiptCopies, paperSize);
       }
     } else {
-      printToBrowser(receiptContent, receiptCopies);
+      await printToBrowser(receiptContent, receiptCopies, paperSize);
     }
   }
+  
+  console.log('[Print] Sequential printing complete');
 };
 
 /**
