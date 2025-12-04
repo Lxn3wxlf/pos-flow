@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package, Keyboard } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
@@ -143,6 +143,7 @@ const POS = () => {
   const [hasModifiers, setHasModifiers] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
   const [cashPadOpen, setCashPadOpen] = useState(false);
+  const [showKeypad, setShowKeypad] = useState(false);
 
   // Check for pending EOD on mount and periodically
   useEffect(() => {
@@ -622,12 +623,25 @@ const POS = () => {
                   className="flex-1"
                   disabled={isLocked}
                 />
+                <Button
+                  variant={showKeypad ? "default" : "outline"}
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  onClick={() => setShowKeypad(!showKeypad)}
+                  disabled={isLocked}
+                >
+                  <Keyboard className="h-4 w-4" />
+                </Button>
               </div>
-              <SearchKeypad 
-                value={searchQuery} 
-                onChange={setSearchQuery} 
-                disabled={isLocked}
-              />
+              {showKeypad && (
+                <div className="animate-fade-in">
+                  <SearchKeypad 
+                    value={searchQuery} 
+                    onChange={setSearchQuery} 
+                    disabled={isLocked}
+                  />
+                </div>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               {isLocked ? (
