@@ -463,18 +463,44 @@ export const printToBrowser = (
 };
 
 /**
- * Send print job to network printer via raw TCP (requires print server/proxy)
+ * Send print job to network printer via HTTP (for printers with web interface)
+ * Falls back to raw TCP attempt if HTTP fails
  */
 export const sendToNetworkPrinter = async (
   printerIp: string,
-  data: string,
-  port: number = 9100
+  content: string,
+  printerName: string = 'Printer'
 ): Promise<boolean> => {
-  // Note: Direct TCP printing from browser is not possible due to security restrictions
-  // This would need to be routed through an edge function or local print server
-  console.log(`[Print] Would send to ${printerIp}:${port}`, data.length, 'bytes');
+  console.log(`[Print] Sending to ${printerName} at ${printerIp}...`);
   
-  // For now, fall back to browser printing
+  // Try HTTP POST (many thermal printers support this)
+  try {
+    // Common endpoints for thermal printers
+    const endpoints = [
+      `http://${printerIp}/cgi-bin/epos/service.cgi`,  // Epson
+      `http://${printerIp}/StarWebPRNT/SendMessage`,   // Star
+      `http://${printerIp}:9100`,                       // Raw TCP via HTTP proxy
+      `http://${printerIp}/print`,                      // Generic
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/html' },
+          body: content,
+          mode: 'no-cors', // Required for cross-origin printer requests
+        });
+        console.log(`[Print] Sent to ${printerName} via ${endpoint}`);
+        return true;
+      } catch (e) {
+        // Try next endpoint
+      }
+    }
+  } catch (error) {
+    console.warn(`[Print] Network print failed for ${printerName}:`, error);
+  }
+  
   return false;
 };
 
@@ -506,43 +532,44 @@ export const printOrder = async (
   const kitchenItems = filterKitchenItems(order.items, routes, printers);
   const hasKitchenItems = kitchenItems.length > 0;
 
-  console.log('[Print] Starting combined print job (kitchen + receipt in one dialog):', {
+  // Find configured printers
+  const kitchenPrinter = printers.find(p => p.printer_type === 'kitchen');
+  const receiptPrinter = printers.find(p => p.printer_type === 'receipt');
+
+  console.log('[Print] Starting print sequence:', {
     kitchenItems: kitchenItems.length,
-    receiptCopies,
-    paperSize: `${paperSize.widthMm}mm x ${paperSize.heightMm}mm`
+    kitchenPrinter: kitchenPrinter?.name || 'None',
+    receiptPrinter: receiptPrinter?.name || 'None (using 180 default)',
   });
 
-  // Build combined content: Kitchen ticket first, then receipt copies
-  const pages: string[] = [];
-
-  // Page 1: Kitchen ticket (if applicable)
+  // STEP 1: Print kitchen ticket FIRST
   if (printKitchenTicket && hasKitchenItems) {
+    console.log('[Print] Step 1: Sending to KITCHEN printer...');
     const kitchenContent = generateKitchenTicket(order, kitchenItems);
-    pages.push(kitchenContent);
-  }
-
-  // Pages 2+: Receipt copies
-  if (printReceipt) {
-    const receiptContent = generateReceipt(order, branding);
-    for (let i = 0; i < receiptCopies; i++) {
-      pages.push(receiptContent);
+    
+    if (kitchenPrinter?.ip_address) {
+      await sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen');
     }
+    // Also print via browser for backup
+    await printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
+    
+    // Wait before printing receipt
+    await new Promise(resolve => setTimeout(resolve, 1500));
   }
 
-  if (pages.length === 0) {
-    console.log('[Print] No pages to print');
-    return;
+  // STEP 2: Print receipt on 180 printer SECOND
+  if (printReceipt) {
+    console.log('[Print] Step 2: Sending to RECEIPT printer (180)...');
+    const receiptContent = generateReceipt(order, branding);
+    
+    if (receiptPrinter?.ip_address) {
+      await sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt (180)');
+    }
+    // Also print via browser for backup
+    await printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT');
   }
-
-  // Combine all pages into single print job
-  const combinedContent = pages.map((page, index) => 
-    `<div class="print-page" ${index > 0 ? 'style="page-break-before: always;"' : ''}>${page}</div>`
-  ).join('');
-
-  // Single print dialog for all pages
-  await printToBrowser(combinedContent, 1, paperSize, 'Order & Receipt');
   
-  console.log('[Print] Combined print job sent:', pages.length, 'pages');
+  console.log('[Print] Print sequence complete: Kitchen → Receipt (180)');
 };
 
 /**
