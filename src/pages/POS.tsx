@@ -619,14 +619,23 @@ const POS = () => {
 
     // Print with multi-destination routing:
     // - Kitchen ticket for food/bar items (auto-routed based on settings)
-    // - 2 receipt copies (customer + cashier/till)
-    await printOrder(orderData, {
+    // - Receipt for customer
+    const printResult = await printOrder(orderData, {
       printKitchenTicket: true,
       printReceipt: true,
-      receiptCopies: 2, // Customer copy + Till reconciliation copy
+      receiptCopies: 1,
     });
     
-    toast.success('Order sent to kitchen & receipt printed');
+    // Show print status feedback
+    if (printResult.kitchenPrinted && printResult.receiptPrinted) {
+      toast.success('Receipt sent to Cashier and Kitchen Printers');
+    } else if (printResult.kitchenPrinted) {
+      toast.success('Kitchen ticket printed', { description: 'Receipt printer unavailable' });
+    } else if (printResult.receiptPrinted) {
+      toast.success('Receipt printed', { description: 'Kitchen printer unavailable' });
+    } else {
+      toast.info('Printed via browser dialog');
+    }
   };
 
   const openPrintPreview = () => {
