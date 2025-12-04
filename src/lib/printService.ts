@@ -532,8 +532,9 @@ export const printOrder = async (
       await printToBrowser(kitchenContent, 1, paperSize, 'Kitchen Order');
     }
     
-    // Small delay between kitchen and receipt to ensure order
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for kitchen print dialog to close before showing receipt
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('[Print] Kitchen ticket complete, proceeding to receipt...');
   }
 
   // STEP 2: Print receipt SECOND (print order 180)
