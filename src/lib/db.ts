@@ -58,6 +58,25 @@ export interface SyncQueue {
   error?: string;
 }
 
+// Delete database using native API (more reliable for corrupted DBs)
+const deleteDatabase = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase('POSDatabase');
+    request.onsuccess = () => {
+      console.log('[DB] Database deleted successfully');
+      resolve();
+    };
+    request.onerror = () => {
+      console.error('[DB] Failed to delete database');
+      reject(request.error);
+    };
+    request.onblocked = () => {
+      console.warn('[DB] Database deletion blocked - closing connections');
+      resolve();
+    };
+  });
+};
+
 export class POSDatabase extends Dexie {
   products!: Table<LocalProduct, string>;
   sales!: Table<LocalSale, string>;
@@ -73,16 +92,50 @@ export class POSDatabase extends Dexie {
       sale_items: 'id, sale_id, product_id',
       sync_queue: '++id, type, created_at, attempts'
     });
+
+    // Handle database errors globally
+    this.on('blocked', () => {
+      console.warn('[DB] Database blocked - another connection is open');
+    });
   }
 }
 
-export const db = new POSDatabase();
+export let db = new POSDatabase();
+
+// Initialize database with error recovery
+export const initDatabase = async (): Promise<boolean> => {
+  try {
+    await db.open();
+    // Test if we can actually query
+    await db.products.count();
+    console.log('[DB] Database initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('[DB] Database initialization failed, attempting recovery:', error);
+    try {
+      // Close any existing connections
+      db.close();
+      // Delete corrupted database
+      await deleteDatabase();
+      // Create fresh instance
+      db = new POSDatabase();
+      await db.open();
+      console.log('[DB] Database recovered successfully');
+      return true;
+    } catch (recoveryError) {
+      console.error('[DB] Database recovery failed:', recoveryError);
+      return false;
+    }
+  }
+};
 
 // Clear sync queue to fix corrupted data issues
 export const clearSyncQueue = async () => {
   try {
-    await db.sync_queue.clear();
-    console.log('[DB] Sync queue cleared');
+    if (db.isOpen()) {
+      await db.sync_queue.clear();
+      console.log('[DB] Sync queue cleared');
+    }
   } catch (error) {
     console.error('[DB] Failed to clear sync queue:', error);
   }
@@ -91,7 +144,9 @@ export const clearSyncQueue = async () => {
 // Reset database completely
 export const resetDatabase = async () => {
   try {
-    await db.delete();
+    db.close();
+    await deleteDatabase();
+    db = new POSDatabase();
     await db.open();
     console.log('[DB] Database reset complete');
   } catch (error) {
