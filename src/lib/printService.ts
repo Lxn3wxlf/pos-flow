@@ -214,7 +214,7 @@ export const generateKitchenTicket = (order: PrintOrderData, kitchenItems?: Prin
   return `
     <div style="font-family: 'Courier New', monospace; width: 280px; padding: 10px; background: white; color: black;">
       <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
-        <img src="${DEFAULT_LOGO_URL}" alt="Casbah Logo" style="max-width: 180px; max-height: 70px; margin-bottom: 8px;" onerror="this.style.display='none'" />
+        <img src="${DEFAULT_LOGO_URL}" alt="Casbah Logo" style="max-width: 180px; max-height: 70px; margin-bottom: 8px; filter: grayscale(100%) contrast(1.2);" onerror="this.style.display='none'" />
         <div style="font-size: 20px; font-weight: bold;">KITCHEN ORDER</div>
         <div style="font-size: 28px; font-weight: bold; margin: 5px 0;">
           #${order.orderNumber.split('-').pop()?.toUpperCase()}
@@ -281,7 +281,7 @@ export const generateReceipt = (
   return `
     <div style="font-family: 'Courier New', monospace; width: 280px; padding: 10px; background: white; color: black;">
       <div style="text-align: center; margin-bottom: 10px;">
-        <img src="${logoUrl}" alt="${businessName} Logo" style="max-width: 200px; max-height: 70px; margin-bottom: 5px;" onerror="this.style.display='none'" />
+        <img src="${logoUrl}" alt="${businessName} Logo" style="max-width: 200px; max-height: 70px; margin-bottom: 5px; filter: grayscale(100%) contrast(1.2);" onerror="this.style.display='none'" />
         <div style="font-size: 11px;">GRILL & COFFEE</div>
       </div>
       
