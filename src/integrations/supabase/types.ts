@@ -872,6 +872,65 @@ export type Database = {
           },
         ]
       }
+      print_routing_rules: {
+        Row: {
+          category_name: string
+          created_at: string
+          id: string
+          printer_id: string
+        }
+        Insert: {
+          category_name: string
+          created_at?: string
+          id?: string
+          printer_id: string
+        }
+        Update: {
+          category_name?: string
+          created_at?: string
+          id?: string
+          printer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_routing_rules_printer_id_fkey"
+            columns: ["printer_id"]
+            isOneToOne: false
+            referencedRelation: "printer_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      printer_settings: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string
+          is_active: boolean
+          name: string
+          printer_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address: string
+          is_active?: boolean
+          name: string
+          printer_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string
+          is_active?: boolean
+          name?: string
+          printer_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_modifiers: {
         Row: {
           created_at: string
@@ -1128,6 +1187,42 @@ export type Database = {
           updated_at?: string | null
           usage_count?: number | null
           usage_limit?: number | null
+        }
+        Relationships: []
+      }
+      receipt_branding: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          business_name: string | null
+          created_at: string
+          footer_text: string | null
+          id: string
+          logo_url: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          business_name?: string | null
+          created_at?: string
+          footer_text?: string | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          business_name?: string | null
+          created_at?: string
+          footer_text?: string | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

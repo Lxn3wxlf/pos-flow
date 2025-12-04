@@ -17,6 +17,8 @@ import AdminCombos from "./pages/AdminCombos";
 import AdminProductModifiers from "./pages/AdminProductModifiers";
 import AdminPromotions from "./pages/AdminPromotions";
 import AdminCustomers from "./pages/AdminCustomers";
+import AdminEmployeeAccess from "./pages/AdminEmployeeAccess";
+import AdminPrintSettings from "./pages/AdminPrintSettings";
 import Waiter from "./pages/Waiter";
 import WaiterOrder from "./pages/WaiterOrder";
 import Kitchen from "./pages/Kitchen";
@@ -64,6 +66,8 @@ const App = () => (
             <Route path="/admin/inventory" element={<AdminInventory />} />
             <Route path="/admin/locations" element={<AdminLocations />} />
             <Route path="/admin/schedule" element={<AdminSchedule />} />
+            <Route path="/admin/employees" element={<AdminEmployeeAccess />} />
+            <Route path="/admin/print-settings" element={<AdminPrintSettings />} />
             <Route path="/time-tracking" element={<TimeTracking />} />
             <Route path="/admin/reservations" element={<AdminReservations />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
