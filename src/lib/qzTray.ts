@@ -1,7 +1,6 @@
 /**
  * QZ Tray Integration for Silent ESC/POS Printing
  * Supports GTP-180 and other ESC/POS compatible thermal printers
- * Features: Dynamic loading, auto-reconnect, dual-printer support
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -15,73 +14,25 @@ declare global {
 
 // QZ Tray connection status
 let isConnected = false;
-let connectionPromise: Promise<boolean> | null = null;
-let reconnectTimeout: NodeJS.Timeout | null = null;
+let connectionPromise: Promise<void> | null = null;
 
 /**
- * Load QZ Tray script dynamically
- */
-export const loadQZ = (): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    // Already loaded
-    if (window.qz) {
-      return resolve(window.qz);
-    }
-
-    // Check if script is already being loaded
-    const existingScript = document.querySelector('script[src*="qz-tray"]');
-    if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(window.qz));
-      existingScript.addEventListener('error', reject);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.min.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('[QZ Tray] Script loaded');
-      resolve(window.qz);
-    };
-    script.onerror = (e) => {
-      console.error('[QZ Tray] Failed to load script:', e);
-      reject(e);
-    };
-    document.head.appendChild(script);
-  });
-};
-
-/**
- * Initialize QZ Tray connection with auto-reconnect
+ * Initialize QZ Tray connection
  */
 export const initQZTray = async (): Promise<boolean> => {
-  // Clear any pending reconnect
-  if (reconnectTimeout) {
-    clearTimeout(reconnectTimeout);
-    reconnectTimeout = null;
-  }
-
-  // Load QZ dynamically first
-  try {
-    await loadQZ();
-  } catch (err) {
-    console.error('[QZ Tray] Failed to load library:', err);
+  if (typeof window === 'undefined' || !window.qz) {
+    console.warn('[QZ Tray] QZ Tray library not loaded');
     return false;
   }
 
-  if (!window.qz) {
-    console.warn('[QZ Tray] QZ Tray library not available');
-    return false;
-  }
-
-  // Already connected
   if (isConnected && window.qz.websocket.isActive()) {
     return true;
   }
 
   // Prevent multiple connection attempts
   if (connectionPromise) {
-    return connectionPromise;
+    await connectionPromise;
+    return isConnected;
   }
 
   connectionPromise = (async () => {
@@ -91,24 +42,16 @@ export const initQZTray = async (): Promise<boolean> => {
         console.log('[QZ Tray] Connected successfully');
         isConnected = true;
       }
-      return true;
     } catch (err) {
       console.error('[QZ Tray] Connection error:', err);
       isConnected = false;
-      
-      // Auto-retry in 3 seconds
-      reconnectTimeout = setTimeout(() => {
-        console.log('[QZ Tray] Attempting auto-reconnect...');
-        initQZTray();
-      }, 3000);
-      
-      return false;
     } finally {
       connectionPromise = null;
     }
   })();
 
-  return connectionPromise;
+  await connectionPromise;
+  return isConnected;
 };
 
 /**
@@ -122,11 +65,6 @@ export const isQZConnected = (): boolean => {
  * Disconnect from QZ Tray
  */
 export const disconnectQZTray = async (): Promise<void> => {
-  if (reconnectTimeout) {
-    clearTimeout(reconnectTimeout);
-    reconnectTimeout = null;
-  }
-  
   if (typeof window !== 'undefined' && window.qz && window.qz.websocket.isActive()) {
     await window.qz.websocket.disconnect();
     isConnected = false;
@@ -361,7 +299,7 @@ export interface QZPrintResult {
  * Auto print order to both cashier and kitchen printers via QZ Tray
  */
 export const autoPrintOrder = async (order: OrderData): Promise<QZPrintResult> => {
-  // Initialize QZ (loads dynamically if needed)
+  // Check QZ connection
   if (!await initQZTray()) {
     console.warn('[QZ Tray] Not connected, cannot print');
     return {
