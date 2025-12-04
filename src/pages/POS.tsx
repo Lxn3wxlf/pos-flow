@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncEngine } from '@/hooks/useSyncEngine';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { db, LocalProduct } from '@/lib/db';
+import { db, LocalProduct, clearSyncQueue } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -148,6 +148,26 @@ const POS = () => {
   const [showKeypad, setShowKeypad] = useState(false);
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [previewOrderData, setPreviewOrderData] = useState<PrintOrderData | null>(null);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  // Database recovery function
+  const resetDatabase = async () => {
+    try {
+      await db.delete();
+      await db.open();
+      setDbError(null);
+      toast.success('Database reset successful. Refreshing...');
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to reset database:', error);
+      toast.error('Failed to reset database');
+    }
+  };
+
+  // Clear sync queue on mount to prevent corrupted data issues
+  useEffect(() => {
+    clearSyncQueue();
+  }, []);
 
   // Check for pending EOD on mount and periodically
   useEffect(() => {
@@ -212,16 +232,47 @@ const POS = () => {
     }
   };
 
-  // Load products from IndexedDB
+  // Load products from IndexedDB with error handling
   const products = useLiveQuery(
-    () => db.products.toArray(),
-    []
+    async () => {
+      try {
+        return await db.products.toArray();
+      } catch (error) {
+        console.error('Database error:', error);
+        setDbError('Database error occurred. Please reset the database.');
+        return [];
+      }
+    },
+    [],
+    [] // Default value to prevent crashes
   );
 
   // Redirect if not authenticated or doesn't have cashier/waiter/admin role
   if (!user) return <Navigate to="/auth" />;
   const hasAccess = profile?.roles?.some(r => ['cashier', 'waiter', 'admin'].includes(r));
   if (!hasAccess) return <Navigate to="/auth" />;
+
+  // Show database error UI
+  if (dbError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-destructive">Database Error</CardTitle>
+            <CardDescription>{dbError}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The local database may be corrupted. Click below to reset it and reload the page.
+            </p>
+            <Button onClick={resetDatabase} variant="destructive" className="w-full">
+              Reset Database
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Categorize products
   const getCategoryName = (categoryId: string | null) => {
