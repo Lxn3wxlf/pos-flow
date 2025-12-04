@@ -518,7 +518,7 @@ const POS = () => {
     }
   };
 
-  const printReceipt = (saleId: string, items: CartItem[], totals: any) => {
+  const printReceipt = async (saleId: string, items: CartItem[], totals: any) => {
     // Build print items with category information for routing
     const printItems: PrintItem[] = items.map(item => {
       const categoryName = getCategoryName(item.product.category_id);
@@ -551,15 +551,15 @@ const POS = () => {
     };
 
     // Print with multi-destination routing:
-    // - Kitchen ticket for food/bar items
+    // - Kitchen ticket for food/bar items (auto-routed based on settings)
     // - 2 receipt copies (customer + cashier/till)
-    printOrder(orderData, {
+    await printOrder(orderData, {
       printKitchenTicket: true,
       printReceipt: true,
       receiptCopies: 2, // Customer copy + Till reconciliation copy
     });
     
-    toast.success('Receipts sent to printer');
+    toast.success('Order sent to kitchen & receipt printed');
   };
 
   const totals = calculateTotals();
