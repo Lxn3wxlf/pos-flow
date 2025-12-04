@@ -17,6 +17,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
 import ModifierSelector, { SelectedModifier } from '@/components/ModifierSelector';
+import NumberPadDialog from '@/components/NumberPadDialog';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/casbah-logo.svg';
 import { printOrder, PrintOrderData, PrintItem } from '@/lib/printService';
@@ -140,6 +141,7 @@ const POS = () => {
   const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<LocalProduct | null>(null);
   const [hasModifiers, setHasModifiers] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
+  const [cashPadOpen, setCashPadOpen] = useState(false);
 
   // Check for pending EOD on mount and periodically
   useEffect(() => {
@@ -650,165 +652,162 @@ const POS = () => {
         </div>
 
         {/* Cart Section */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Cart</CardTitle>
-              <CardDescription>{cart.length} items</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {cart.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Cart is empty</p>
-              ) : (
-                <>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {cart.map(item => {
-                      const itemPrice = getItemPrice(item);
-                      return (
-                        <div key={item.product.id} className="flex items-center gap-2 p-2 border rounded">
-                          <div className="flex-1">
-                             <p className="font-medium text-sm">
-                               {item.product.name}
-                               {item.weight_amount && ` (${item.weight_amount}${item.weight_unit})`}
+        <div className="space-y-3">
+          <Card className="p-3">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold">Cart</span>
+              <span className="text-xs text-muted-foreground">{cart.length} items</span>
+            </div>
+            {cart.length === 0 ? (
+              <p className="text-center text-muted-foreground py-6 text-sm">Cart is empty</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                  {cart.map(item => {
+                    const itemPrice = getItemPrice(item);
+                    return (
+                      <div key={item.product.id} className="flex items-center gap-1.5 p-1.5 border rounded text-xs">
+                        <div className="flex-1 min-w-0">
+                           <p className="font-medium truncate">
+                             {item.product.name}
+                             {item.weight_amount && ` (${item.weight_amount}${item.weight_unit})`}
+                           </p>
+                           {item.modifiers && item.modifiers.length > 0 && (
+                             <p className="text-[10px] text-muted-foreground truncate">
+                               {item.modifiers.map(m => m.modifier_name).join(', ')}
                              </p>
-                             {item.modifiers && item.modifiers.length > 0 && (
-                               <p className="text-xs text-muted-foreground">
-                                 {item.modifiers.map(m => m.modifier_name).join(', ')}
-                               </p>
-                             )}
-                             <p className="text-xs text-muted-foreground">R{itemPrice.toFixed(2)} each</p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => updateQty(item.product.id, item.qty - 1)}
-                              disabled={isLocked}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center font-medium">{item.qty}</span>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => updateQty(item.product.id, item.qty + 1)}
-                              disabled={isLocked}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold">R{(itemPrice * item.qty).toFixed(2)}</p>
-                          </div>
+                           )}
+                        </div>
+                        <div className="flex items-center gap-0.5">
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-6 w-6 text-destructive"
-                            onClick={() => removeFromCart(item.product.id)}
+                            className="h-5 w-5"
+                            onClick={() => updateQty(item.product.id, item.qty - 1)}
                             disabled={isLocked}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Minus className="h-2.5 w-2.5" />
+                          </Button>
+                          <span className="w-5 text-center font-medium text-xs">{item.qty}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-5 w-5"
+                            onClick={() => updateQty(item.product.id, item.qty + 1)}
+                            disabled={isLocked}
+                          >
+                            <Plus className="h-2.5 w-2.5" />
                           </Button>
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Subtotal:</span>
-                      <span>R{totals.subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Tax:</span>
-                      <span>R{totals.taxAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Discount:</span>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={discountAmount}
-                        onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                        className="w-24 h-8"
-                        disabled={isLocked}
-                      />
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total:</span>
-                      <span>R{totals.total.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Payment Method</label>
-                    <Select value={paymentMethod} onValueChange={(val) => { setPaymentMethod(val); setCashReceived(''); }} disabled={isLocked}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="card">Card (Yoco)</SelectItem>
-                        <SelectItem value="capitec">Capitec Pay</SelectItem>
-                        <SelectItem value="eft">EFT / Bank Transfer</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {paymentMethod === 'cash' && (
-                    <div className="space-y-2 p-3 bg-muted rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium">Cash Received:</label>
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm">R</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={cashReceived}
-                            onChange={(e) => setCashReceived(e.target.value)}
-                            placeholder="0.00"
-                            className="w-28 h-8"
-                            disabled={isLocked}
-                          />
-                        </div>
+                        <span className="font-bold text-xs w-16 text-right">R{(itemPrice * item.qty).toFixed(2)}</span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-5 w-5 text-destructive"
+                          onClick={() => removeFromCart(item.product.id)}
+                          disabled={isLocked}
+                        >
+                          <Trash2 className="h-2.5 w-2.5" />
+                        </Button>
                       </div>
-                      {cashReceived && parseFloat(cashReceived) >= totals.total && (
-                        <div className="flex justify-between items-center text-lg font-bold text-green-600 dark:text-green-400">
-                          <span>Change:</span>
-                          <span>R{(parseFloat(cashReceived) - totals.total).toFixed(2)}</span>
-                        </div>
-                      )}
-                      {cashReceived && parseFloat(cashReceived) > 0 && parseFloat(cashReceived) < totals.total && (
-                        <div className="flex justify-between items-center text-sm text-destructive">
-                          <span>Short by:</span>
-                          <span>R{(totals.total - parseFloat(cashReceived)).toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    );
+                  })}
+                </div>
 
-                  <Button 
-                    className="w-full" 
-                    size="lg"
-                    onClick={completeSale}
-                    disabled={cart.length === 0 || isProcessingPayment || isLocked}
-                  >
-                    {isProcessingPayment ? 'Processing...' : `Complete Sale (R${totals.total.toFixed(2)})`}
-                  </Button>
-                </>
-              )}
-            </CardContent>
+                <Separator />
+
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>R{totals.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax:</span>
+                    <span>R{totals.taxAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Discount:</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={discountAmount}
+                      onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                      className="w-20 h-6 text-xs"
+                      disabled={isLocked}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-base font-bold">
+                    <span>Total:</span>
+                    <span>R{totals.total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Payment Method</label>
+                  <Select value={paymentMethod} onValueChange={(val) => { setPaymentMethod(val); setCashReceived(''); }} disabled={isLocked}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card (Yoco)</SelectItem>
+                      <SelectItem value="capitec">Capitec Pay</SelectItem>
+                      <SelectItem value="eft">EFT / Bank Transfer</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {paymentMethod === 'cash' && (
+                  <div className="space-y-2 p-2 bg-muted rounded-lg text-xs">
+                    <Button
+                      variant="outline"
+                      className="w-full h-8 justify-between text-xs"
+                      onClick={() => setCashPadOpen(true)}
+                      disabled={isLocked}
+                    >
+                      <span>Cash Received:</span>
+                      <span className="font-bold">R{cashReceived || '0.00'}</span>
+                    </Button>
+                    {cashReceived && parseFloat(cashReceived) >= totals.total && (
+                      <div className="flex justify-between items-center text-base font-bold text-green-600 dark:text-green-400">
+                        <span>Change:</span>
+                        <span>R{(parseFloat(cashReceived) - totals.total).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {cashReceived && parseFloat(cashReceived) > 0 && parseFloat(cashReceived) < totals.total && (
+                      <div className="flex justify-between items-center text-destructive">
+                        <span>Short by:</span>
+                        <span>R{(totals.total - parseFloat(cashReceived)).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Button 
+                  className="w-full" 
+                  size="sm"
+                  onClick={completeSale}
+                  disabled={cart.length === 0 || isProcessingPayment || isLocked}
+                >
+                  {isProcessingPayment ? 'Processing...' : `Complete Sale (R${totals.total.toFixed(2)})`}
+                </Button>
+              </div>
+            )}
           </Card>
         </div>
       </div>
+
+      {/* Number Pad Dialog */}
+      <NumberPadDialog
+        open={cashPadOpen}
+        onClose={() => setCashPadOpen(false)}
+        onConfirm={(value) => setCashReceived(value)}
+        title="Enter Cash Received"
+        initialValue={cashReceived}
+      />
 
       {/* EOD Dialog */}
       <EODSubmissionDialog
