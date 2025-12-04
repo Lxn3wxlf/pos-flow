@@ -77,3 +77,25 @@ export class POSDatabase extends Dexie {
 }
 
 export const db = new POSDatabase();
+
+// Clear sync queue to fix corrupted data issues
+export const clearSyncQueue = async () => {
+  try {
+    await db.sync_queue.clear();
+    console.log('[DB] Sync queue cleared');
+  } catch (error) {
+    console.error('[DB] Failed to clear sync queue:', error);
+  }
+};
+
+// Reset database completely
+export const resetDatabase = async () => {
+  try {
+    await db.delete();
+    await db.open();
+    console.log('[DB] Database reset complete');
+  } catch (error) {
+    console.error('[DB] Failed to reset database:', error);
+    throw error;
+  }
+};
