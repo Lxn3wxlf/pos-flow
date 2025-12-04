@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
-import { BarChart3, Calendar, ChefHat, DollarSign, MapPin, Package, Settings, ShoppingBag, Users, Utensils, Clock, Percent, Puzzle, LogOut, Wifi, WifiOff, RefreshCw, Truck, Users as UsersIcon } from "lucide-react";
+import { BarChart3, Calendar, ChefHat, DollarSign, MapPin, Package, Settings, ShoppingBag, Users, Utensils, Clock, Percent, Puzzle, LogOut, Wifi, WifiOff, RefreshCw, Truck, Users as UsersIcon, Printer, KeyRound } from "lucide-react";
 import AppHeader from '@/components/AppHeader';
 import logo from '@/assets/casbah-logo.svg';
 
@@ -321,6 +321,48 @@ const Admin = () => {
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Create and manage employee shifts and schedules
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/employees">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-violet-500/10 rounded-lg">
+                    <KeyRound className="h-6 w-6 text-violet-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Employee Access</CardTitle>
+                    <CardDescription>Staff & PIN management</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Manage employees, roles, and secure PIN codes
+                </p>
+              </CardContent>
+            </Link>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Link to="/admin/print-settings">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-amber-500/10 rounded-lg">
+                    <Printer className="h-6 w-6 text-amber-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Print Settings</CardTitle>
+                    <CardDescription>Printers & receipts</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Configure printers, routing rules, and receipt branding
                 </p>
               </CardContent>
             </Link>
