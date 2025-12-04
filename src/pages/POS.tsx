@@ -18,6 +18,7 @@ import AppHeader from '@/components/AppHeader';
 import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
 import ModifierSelector, { SelectedModifier } from '@/components/ModifierSelector';
 import NumberPadDialog from '@/components/NumberPadDialog';
+import SearchKeypad from '@/components/SearchKeypad';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/casbah-logo.svg';
 import { printOrder, PrintOrderData, PrintItem } from '@/lib/printService';
@@ -611,7 +612,7 @@ const POS = () => {
         {/* Products Section */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
@@ -622,6 +623,11 @@ const POS = () => {
                   disabled={isLocked}
                 />
               </div>
+              <SearchKeypad 
+                value={searchQuery} 
+                onChange={setSearchQuery} 
+                disabled={isLocked}
+              />
             </CardHeader>
             <CardContent className="space-y-4">
               {isLocked ? (
