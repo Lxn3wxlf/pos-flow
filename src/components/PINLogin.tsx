@@ -37,35 +37,29 @@ const PINLogin = ({ onSuccess, onSwitchToEmail }: PINLoginProps) => {
 
     setLoading(true);
     try {
-      // Query profiles with matching PIN hash
-      // In production, this should use a secure server-side comparison
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, pin_hash')
-        .not('pin_hash', 'is', null);
+      // Call secure server-side PIN verification
+      const { data, error } = await supabase.functions.invoke('verify-pin', {
+        body: { pin }
+      });
 
-      if (error) throw error;
-
-      // Simple hash comparison (for demo - production should use bcrypt on server)
-      const hashedPin = await hashPIN(pin);
-      const matchedProfile = profiles?.find(p => p.pin_hash === hashedPin);
-
-      if (matchedProfile) {
-        // Get user role
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', matchedProfile.id)
-          .single();
-
-        toast.success(`Welcome, ${matchedProfile.full_name}!`);
-        onSuccess(matchedProfile.id, roles?.role || 'cashier');
-      } else {
-        toast.error('Invalid PIN');
+      if (error) {
+        console.error('PIN verification error:', error);
+        toast.error('Verification failed. Please try again.');
         setPin('');
+        return;
       }
+
+      if (!data.success) {
+        toast.error(data.error || 'Invalid PIN');
+        setPin('');
+        return;
+      }
+
+      toast.success(`Welcome, ${data.user.full_name}!`);
+      onSuccess(data.user.id, data.user.role || 'cashier');
     } catch (error: any) {
-      toast.error(error.message || 'Login failed');
+      console.error('PIN login error:', error);
+      toast.error('Login failed. Please try again.');
       setPin('');
     } finally {
       setLoading(false);
@@ -172,9 +166,9 @@ const PINLogin = ({ onSuccess, onSwitchToEmail }: PINLoginProps) => {
   );
 };
 
-// Simple hash function for PIN (for demo purposes)
-// In production, use bcrypt on the server side
-async function hashPIN(pin: string): Promise<string> {
+// Server-side hash function for admin PIN setting
+// This is only used when setting PINs, not for verification
+export async function hashPIN(pin: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(pin + 'casbah-salt-2024');
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -182,5 +176,4 @@ async function hashPIN(pin: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export { hashPIN };
 export default PINLogin;
