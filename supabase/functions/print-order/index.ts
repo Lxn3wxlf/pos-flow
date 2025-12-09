@@ -289,13 +289,40 @@ serve(async (req) => {
   }
 
   try {
-    const { order_id, order_data, print_type = 'both' } = await req.json();
-    
-    console.log('Print request received:', { order_id, print_type });
+    // Authenticate the request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header for print request');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Verify user authentication
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Print authentication failed:', authError?.message);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const { order_id, order_data, print_type = 'both' } = await req.json();
+    
+    console.log('Print request received:', { order_id, print_type, user_id: user.id });
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch printer settings
     const { data: printers, error: printerError } = await supabase

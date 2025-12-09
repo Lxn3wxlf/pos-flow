@@ -12,6 +12,57 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate the request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Create client with user's token to verify authentication
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Authentication failed:', authError?.message);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    // Create service role client for database operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify user has cashier or admin role
+    const { data: roleCheck } = await supabase.rpc('has_role', { 
+      _user_id: user.id, 
+      _role: 'cashier' 
+    });
+    
+    const { data: adminCheck } = await supabase.rpc('has_role', { 
+      _user_id: user.id, 
+      _role: 'admin' 
+    });
+
+    if (!roleCheck && !adminCheck) {
+      console.error('User lacks required role:', user.id);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Insufficient permissions' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
     const { amount, currency = 'ZAR', metadata, sale_id } = await req.json();
 
     // Get Yoco key from environment variable (secure)
@@ -38,6 +89,7 @@ serve(async (req) => {
         metadata: {
           ...metadata,
           sale_id,
+          processed_by: user.id, // Audit trail
         },
       }),
     });
@@ -49,10 +101,6 @@ serve(async (req) => {
     }
 
     // Save transaction to database
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { data: transaction, error: dbError } = await supabase
       .from('payment_transactions')
       .insert({
@@ -63,7 +111,7 @@ serve(async (req) => {
         payment_method: 'card',
         status: yocoData.status || 'successful',
         provider_transaction_id: yocoData.id,
-        metadata: yocoData,
+        metadata: { ...yocoData, processed_by: user.id },
         processed_at: new Date().toISOString(),
       })
       .select()
@@ -73,6 +121,8 @@ serve(async (req) => {
       console.error('Database error:', dbError);
       throw new Error('Failed to save transaction');
     }
+
+    console.log(`Payment processed by user ${user.id} for amount ${amount}`);
 
     return new Response(
       JSON.stringify({

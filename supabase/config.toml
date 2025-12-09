@@ -1,1 +1,7 @@
 project_id = "blwvzsjwwhpgzyxvclfv"
+
+[functions.verify-pin]
+verify_jwt = false
+
+[functions.print-order]
+verify_jwt = false
