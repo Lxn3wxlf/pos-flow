@@ -16,7 +16,7 @@ export const useSyncEngine = (userId: string | undefined) => {
     try {
       const { data: products, error } = await supabase
         .from('products')
-        .select('*')
+        .select('*, categories(name)')
         .eq('is_active', true);
 
       if (error) throw error;
@@ -26,6 +26,7 @@ export const useSyncEngine = (userId: string | undefined) => {
         await db.products.bulkAdd(
           products.map(p => ({
             ...p,
+            category_name: p.categories?.name || null,
             synced_at: new Date()
           }))
         );

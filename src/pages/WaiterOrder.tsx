@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Minus, Trash2, Send, Search, Settings, ArrowLeft, ShoppingCart, Filter } from 'lucide-react';
+import { getCategoryIcon, getCategoryIconColor } from '@/lib/categoryIcons';
 import AppHeader from '@/components/AppHeader';
 import ModifierSelector, { SelectedModifier } from '@/components/ModifierSelector';
 import ComboSelector, { ComboSelection } from '@/components/ComboSelector';
@@ -24,6 +25,8 @@ interface Product {
   tax_rate: number;
   kitchen_station?: string;
   category_id?: string;
+  category_name?: string;
+  image_url?: string;
 }
 
 interface Category {
@@ -159,12 +162,15 @@ const WaiterOrder = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('*, categories(name)')
         .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
-      setProducts(data || []);
+      setProducts((data || []).map(p => ({
+        ...p,
+        category_name: p.categories?.name || null
+      })));
     } catch (error) {
       console.error('Error loading products:', error);
     }
@@ -444,24 +450,39 @@ const WaiterOrder = () => {
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {filteredProducts.map(product => (
-                  <Button
-                    key={product.id}
-                    variant="outline"
-                    className="h-auto flex-col items-start p-4 hover:bg-accent hover:scale-105 transition-transform relative"
-                    onClick={() => openCustomization(product)}
-                  >
-                    {(hasModifiers.has(product.id) || hasCombos.has(product.id)) && (
-                      <Badge variant="secondary" className="absolute top-2 right-2 h-6 w-6 p-0 flex items-center justify-center">
-                        <Settings className="h-3 w-3" />
-                      </Badge>
-                    )}
-                    <span className="font-semibold text-sm line-clamp-2">{product.name}</span>
-                    <span className="text-lg font-bold text-primary mt-2">
-                      R{product.price.toFixed(2)}
-                    </span>
-                  </Button>
-                ))}
+                {filteredProducts.map(product => {
+                  const CategoryIcon = getCategoryIcon(product.category_name);
+                  const iconColor = getCategoryIconColor(product.category_name);
+                  return (
+                    <Button
+                      key={product.id}
+                      variant="outline"
+                      className="h-auto flex-col items-start p-3 hover:bg-accent hover:scale-105 transition-transform relative"
+                      onClick={() => openCustomization(product)}
+                    >
+                      {(hasModifiers.has(product.id) || hasCombos.has(product.id)) && (
+                        <Badge variant="secondary" className="absolute top-2 right-2 h-6 w-6 p-0 flex items-center justify-center">
+                          <Settings className="h-3 w-3" />
+                        </Badge>
+                      )}
+                      <div className="w-full aspect-square mb-2 rounded-md bg-muted flex items-center justify-center overflow-hidden">
+                        {product.image_url ? (
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <CategoryIcon className={`h-10 w-10 ${iconColor}`} />
+                        )}
+                      </div>
+                      <span className="font-semibold text-sm line-clamp-2">{product.name}</span>
+                      <span className="text-lg font-bold text-primary mt-2">
+                        R{product.price.toFixed(2)}
+                      </span>
+                    </Button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
