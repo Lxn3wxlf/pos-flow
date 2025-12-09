@@ -12,7 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Package, Keyboard, Eye } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Keyboard, Eye } from 'lucide-react';
+import { getCategoryIcon, getCategoryIconColor } from '@/lib/categoryIcons';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { EODSubmissionDialog } from '@/components/EODSubmissionDialog';
@@ -97,6 +98,9 @@ const ProductButton = ({ product, onAdd, hasModifiers, isLocked, cart, setCart }
     }
   };
 
+  const CategoryIcon = getCategoryIcon(product.category_name);
+  const iconColor = getCategoryIconColor(product.category_name);
+
   return (
     <Button
       variant="outline"
@@ -112,7 +116,7 @@ const ProductButton = ({ product, onAdd, hasModifiers, isLocked, cart, setCart }
             className="w-full h-full object-cover"
           />
         ) : (
-          <Package className="h-8 w-8 text-muted-foreground/40" />
+          <CategoryIcon className={`h-10 w-10 ${iconColor}`} />
         )}
       </div>
       <span className="font-semibold text-xs leading-tight line-clamp-2">{product.name}</span>

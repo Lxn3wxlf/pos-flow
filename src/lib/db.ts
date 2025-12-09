@@ -11,6 +11,7 @@ export interface LocalProduct {
   tax_rate: number;
   stock_qty: number;
   category_id?: string;
+  category_name?: string;
   is_active: boolean;
   image_url?: string;
   synced_at: Date;
