@@ -221,42 +221,43 @@ function formatDateTime(isoString: string): string {
   return date.toLocaleDateString('en-ZA') + ', ' + date.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Attempt to send to network printer via HTTP
-async function sendToPrinterHTTP(printerIp: string, port: number, data: string): Promise<{ success: boolean; error?: string }> {
-  const endpoints = [
-    `http://${printerIp}:${port}/print`,
-    `http://${printerIp}/print`,
-    `http://${printerIp}:${port}`,
-    `http://${printerIp}/cgi-bin/epos/service.cgi`,
-    `http://${printerIp}/StarWebPRNT/SendMessage`,
-  ];
-  
-  for (const endpoint of endpoints) {
+// Send raw ESC/POS data to printer via TCP (port 9100)
+async function sendToPrinterTCP(printerIp: string, port: number, data: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log(`Connecting to printer at ${printerIp}:${port}...`);
+    
+    // Connect to printer using raw TCP socket
+    const conn = await Deno.connect({
+      hostname: printerIp,
+      port: port,
+    });
+    
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      // Convert string to bytes
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(data);
       
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-        },
-        body: data,
-        signal: controller.signal,
-      });
+      // Write data to printer
+      await conn.write(bytes);
       
-      clearTimeout(timeout);
+      // Give printer time to process
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      if (response.ok) {
-        return { success: true };
+      console.log(`Successfully sent ${bytes.length} bytes to ${printerIp}:${port}`);
+      return { success: true };
+    } finally {
+      // Always close the connection
+      try {
+        conn.close();
+      } catch (e) {
+        // Connection may already be closed
       }
-    } catch (e) {
-      // Try next endpoint
-      continue;
     }
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+    console.error(`TCP print error for ${printerIp}:${port}:`, errorMessage);
+    return { success: false, error: `Could not connect to printer at ${printerIp}:${port} - ${errorMessage}` };
   }
-  
-  return { success: false, error: 'Could not connect to printer at ' + printerIp };
 }
 
 // Log print attempt to database
@@ -362,8 +363,8 @@ serve(async (req) => {
 
     if ((print_type === 'both' || print_type === 'receipt') && receiptPrinter) {
       printPromises.push(
-        sendToPrinterHTTP(receiptPrinter.ip_address, receiptPrinter.port || 9100, customerReceiptData)
-          .then(async (result) => {
+        sendToPrinterTCP(receiptPrinter.ip_address, receiptPrinter.port || 9100, customerReceiptData)
+          .then(async (result: { success: boolean; error?: string }) => {
             results.receipt = result;
             await logPrintAttempt(
               supabase,
@@ -380,8 +381,8 @@ serve(async (req) => {
 
     if ((print_type === 'both' || print_type === 'kitchen') && kitchenPrinter) {
       printPromises.push(
-        sendToPrinterHTTP(kitchenPrinter.ip_address, kitchenPrinter.port || 9100, kitchenSlipData)
-          .then(async (result) => {
+        sendToPrinterTCP(kitchenPrinter.ip_address, kitchenPrinter.port || 9100, kitchenSlipData)
+          .then(async (result: { success: boolean; error?: string }) => {
             results.kitchen = result;
             await logPrintAttempt(
               supabase,
