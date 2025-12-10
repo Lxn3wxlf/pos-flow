@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Keyboard, Eye } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Keyboard, Eye, ParkingSquare } from 'lucide-react';
 import { getCategoryIcon, getCategoryIconColor } from '@/lib/categoryIcons';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/casbah-logo.svg';
 import { printOrder, PrintOrderData, PrintItem } from '@/lib/printService';
 import { autoPrintOrder, isQZConnected, OrderData, initQZTray } from '@/lib/qzTray';
+import ParkedOrdersDialog, { getParkedOrdersCount } from '@/components/ParkedOrdersDialog';
 
 interface CartItem {
   product: LocalProduct;
@@ -154,6 +155,8 @@ const POS = () => {
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [previewOrderData, setPreviewOrderData] = useState<PrintOrderData | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [parkedOrdersOpen, setParkedOrdersOpen] = useState(false);
+  const [parkedOrdersCount, setParkedOrdersCount] = useState(0);
 
   // Database recovery function
   const resetDatabase = async () => {
@@ -199,6 +202,7 @@ const POS = () => {
   useEffect(() => {
     loadProductFeatures();
     loadCategories();
+    setParkedOrdersCount(getParkedOrdersCount());
   }, []);
 
   const loadCategories = async () => {
@@ -852,7 +856,19 @@ const POS = () => {
           <Card className="p-3">
             <div className="flex justify-between items-center mb-2">
               <span className="font-semibold">Cart</span>
-              <span className="text-xs text-muted-foreground">{cart.length} items</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setParkedOrdersOpen(true)}
+                  disabled={isLocked}
+                >
+                  <ParkingSquare className="h-3 w-3" />
+                  Tables {parkedOrdersCount > 0 && `(${parkedOrdersCount})`}
+                </Button>
+                <span className="text-xs text-muted-foreground">{cart.length} items</span>
+              </div>
             </div>
             {cart.length === 0 ? (
               <p className="text-center text-muted-foreground py-6 text-sm">Cart is empty</p>
@@ -1041,6 +1057,21 @@ const POS = () => {
         open={printPreviewOpen}
         onOpenChange={setPrintPreviewOpen}
         orderData={previewOrderData}
+      />
+
+      {/* Parked Orders Dialog */}
+      <ParkedOrdersDialog
+        open={parkedOrdersOpen}
+        onOpenChange={(open) => {
+          setParkedOrdersOpen(open);
+          setParkedOrdersCount(getParkedOrdersCount());
+        }}
+        currentCart={cart}
+        onLoadOrder={(loadedCart) => {
+          setCart(loadedCart);
+          setParkedOrdersCount(getParkedOrdersCount());
+        }}
+        getItemPrice={getItemPrice}
       />
     </div>
   );
