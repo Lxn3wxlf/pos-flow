@@ -1742,6 +1742,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_profiles_view_context: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "cashier" | "waiter" | "kitchen"

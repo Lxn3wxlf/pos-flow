@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Fetch profile and roles after setting user
           setTimeout(async () => {
             const [profileResult, rolesResult] = await Promise.all([
-              supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+              supabase.from('profiles_safe').select('*').eq('id', session.user.id).single(),
               supabase.from('user_roles').select('role').eq('user_id', session.user.id)
             ]);
 
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (session?.user) {
         setTimeout(async () => {
           const [profileResult, rolesResult] = await Promise.all([
-            supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+            supabase.from('profiles_safe').select('*').eq('id', session.user.id).single(),
             supabase.from('user_roles').select('role').eq('user_id', session.user.id)
           ]);
 
