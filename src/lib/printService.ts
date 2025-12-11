@@ -629,7 +629,7 @@ const printOrderFallback = async (order: PrintOrderData): Promise<void> => {
   if (kitchenItems.length > 0) {
     const kitchenContent = generateKitchenTicket(order, kitchenItems);
     await printToBrowser(kitchenContent, 1, DEFAULT_PAPER_SIZE, 'KITCHEN ORDER');
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
   
   // Print receipt
@@ -709,7 +709,7 @@ export const printOrder = async (
     console.log('[Print] Kitchen network print failed, falling back to browser...');
     await printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
     kitchenPrinted = true;
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
 
   if (receiptContent && !receiptPrinted) {
