@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeString } from '@/lib/validations';
 
 export interface PrintItem {
   productName: string;
@@ -247,7 +248,7 @@ export const generateKitchenTicket = (order: PrintOrderData, kitchenItems?: Prin
       <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 10px;">
         <div style="font-size: 36px; font-weight: bold;">KITCHEN ORDER</div>
         <div style="font-size: 48px; font-weight: bold; margin: 10px 0;">
-          #${order.orderNumber.split('-').pop()?.toUpperCase()}
+          #${sanitizeString(order.orderNumber.split('-').pop()?.toUpperCase() || '')}
         </div>
       </div>
       
@@ -256,21 +257,21 @@ export const generateKitchenTicket = (order: PrintOrderData, kitchenItems?: Prin
           <div style="margin: 10px 0; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
             <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
               <span>${item.qty}x</span>
-              <span style="flex: 1; margin-left: 10px;">${item.productName}</span>
+              <span style="flex: 1; margin-left: 10px;">${sanitizeString(item.productName)}</span>
             </div>
-            ${item.weightAmount ? `<div style="font-size: 14px; color: #666; margin-left: 30px;">(${item.weightAmount}${item.weightUnit})</div>` : ''}
+            ${item.weightAmount ? `<div style="font-size: 14px; color: #666; margin-left: 30px;">(${item.weightAmount}${sanitizeString(item.weightUnit || '')})</div>` : ''}
             ${item.modifiers && item.modifiers.length > 0 ? `
               <div style="font-size: 14px; color: #333; margin-left: 30px; font-style: italic;">
-                → ${item.modifiers.join(', ')}
+                → ${item.modifiers.map(m => sanitizeString(m)).join(', ')}
               </div>
             ` : ''}
             ${item.specialInstructions ? `
               <div style="font-size: 14px; color: #c00; margin-left: 30px; font-weight: bold;">
-                ⚠ ${item.specialInstructions}
+                ⚠ ${sanitizeString(item.specialInstructions)}
               </div>
             ` : ''}
             <div style="font-size: 12px; color: #888; margin-left: 30px;">
-              Station: ${item.kitchenStation || 'General'}
+              Station: ${sanitizeString(item.kitchenStation || 'General')}
             </div>
           </div>
         `).join('')}
@@ -295,11 +296,11 @@ export const generateReceipt = (
   const timestamp = order.timestamp.toLocaleString('en-ZA');
   const orderTypeDisplay = order.orderType.replace('_', ' ').toUpperCase();
 
-  const businessName = branding?.business_name || 'CASBAH';
-  const addressLine1 = branding?.address_line1 || '194 Marine Drive';
-  const addressLine2 = branding?.address_line2 || '';
-  const phone = branding?.phone || '065 683 5702';
-  const footerText = branding?.footer_text || 'Thank you for visiting CASBAH!';
+  const businessName = sanitizeString(branding?.business_name || 'CASBAH');
+  const addressLine1 = sanitizeString(branding?.address_line1 || '194 Marine Drive');
+  const addressLine2 = sanitizeString(branding?.address_line2 || '');
+  const phone = sanitizeString(branding?.phone || '065 683 5702');
+  const footerText = sanitizeString(branding?.footer_text || 'Thank you for visiting CASBAH!');
 
   // Use branding logo if set, otherwise use default logo
   const logoUrl = branding?.logo_url || DEFAULT_LOGO_URL;
@@ -307,8 +308,8 @@ export const generateReceipt = (
   return `
     <div style="font-family: 'Courier New', monospace; width: 280px; padding: 10px; background: white; color: black;">
       <div style="text-align: center; margin-bottom: 10px;">
-        <img src="${logoUrl}" alt="${businessName} Logo" style="max-width: 200px; max-height: 70px; margin-bottom: 5px; filter: grayscale(100%) contrast(1.2);" onerror="this.style.display='none'" />
-        <div style="font-size: 11px;">GRILL & COFFEE</div>
+        <img src="${encodeURI(logoUrl)}" alt="${businessName} Logo" style="max-width: 200px; max-height: 70px; margin-bottom: 5px; filter: grayscale(100%) contrast(1.2);" onerror="this.style.display='none'" />
+        <div style="font-size: 11px;">GRILL &amp; COFFEE</div>
       </div>
       
       <div style="text-align: center; margin-bottom: 10px;">
@@ -319,24 +320,24 @@ export const generateReceipt = (
       </div>
       
       <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 8px 0; margin: 8px 0; text-align: center;">
-        <div style="font-size: 14px; font-weight: bold;">Receipt #${order.orderNumber.split('-').pop()?.toUpperCase()}</div>
+        <div style="font-size: 14px; font-weight: bold;">Receipt #${sanitizeString(order.orderNumber.split('-').pop()?.toUpperCase() || '')}</div>
         <div style="font-size: 11px;">${orderTypeDisplay}</div>
-        ${order.tableName ? `<div style="font-size: 11px;">Table: ${order.tableName}</div>` : ''}
-        ${order.customerName ? `<div style="font-size: 11px;">Customer: ${order.customerName}</div>` : ''}
+        ${order.tableName ? `<div style="font-size: 11px;">Table: ${sanitizeString(order.tableName)}</div>` : ''}
+        ${order.customerName ? `<div style="font-size: 11px;">Customer: ${sanitizeString(order.customerName)}</div>` : ''}
         <div style="font-size: 10px; color: #666;">${timestamp}</div>
-        ${order.cashierName ? `<div style="font-size: 10px; color: #666;">Served by: ${order.cashierName}</div>` : ''}
+        ${order.cashierName ? `<div style="font-size: 10px; color: #666;">Served by: ${sanitizeString(order.cashierName)}</div>` : ''}
       </div>
       
       <div style="margin-bottom: 10px;">
         ${order.items.map(item => `
           <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px;">
             <div style="flex: 1;">
-              <span>${item.productName}</span>
-              ${item.weightAmount ? `<span style="color: #666;"> (${item.weightAmount}${item.weightUnit})</span>` : ''}
+              <span>${sanitizeString(item.productName)}</span>
+              ${item.weightAmount ? `<span style="color: #666;"> (${item.weightAmount}${sanitizeString(item.weightUnit || '')})</span>` : ''}
               <span style="color: #666;"> x${item.qty}</span>
               ${item.modifiers && item.modifiers.length > 0 ? `
                 <div style="font-size: 10px; color: #666; margin-left: 10px;">
-                  ${item.modifiers.join(', ')}
+                  ${item.modifiers.map(m => sanitizeString(m)).join(', ')}
                 </div>
               ` : ''}
             </div>
@@ -368,7 +369,7 @@ export const generateReceipt = (
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0;">
           <span>Payment:</span>
-          <span>${order.paymentMethod.toUpperCase()}</span>
+          <span>${sanitizeString(order.paymentMethod.toUpperCase())}</span>
         </div>
       </div>
       
