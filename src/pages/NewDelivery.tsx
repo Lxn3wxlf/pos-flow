@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Search, Plus, Trash2 } from 'lucide-react';
+import { customerSchema, deliveryAddressSchema, validateForm, getFirstError } from '@/lib/validations';
 
 interface Product {
   id: string;
@@ -43,6 +44,7 @@ const NewDelivery = () => {
   const [postalCode, setPostalCode] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('35');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [submitting, setSubmitting] = useState(false);
 
@@ -110,8 +112,34 @@ const NewDelivery = () => {
   };
 
   const submitOrder = async () => {
-    if (!customerName || !customerPhone || !addressLine1 || !city || !postalCode) {
-      toast.error('Please fill in all required fields');
+    setErrors({});
+    
+    // Validate customer data
+    const customerValidation = validateForm(customerSchema, {
+      name: customerName,
+      phone: customerPhone,
+      email: customerEmail || undefined,
+    });
+    
+    if (customerValidation.success === false) {
+      setErrors(customerValidation.errors);
+      toast.error(getFirstError(customerValidation.errors));
+      return;
+    }
+    
+    // Validate address data
+    const addressValidation = validateForm(deliveryAddressSchema, {
+      addressLine1,
+      addressLine2: addressLine2 || undefined,
+      city,
+      postalCode,
+      deliveryNotes: deliveryNotes || undefined,
+      deliveryFee: parseFloat(deliveryFee || '0'),
+    });
+    
+    if (addressValidation.success === false) {
+      setErrors(addressValidation.errors);
+      toast.error(getFirstError(addressValidation.errors));
       return;
     }
 

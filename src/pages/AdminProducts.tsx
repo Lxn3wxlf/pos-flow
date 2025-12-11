@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Package, Plus, Pencil, Trash2, Upload, X } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
+import { productSchema, validateForm, getFirstError } from '@/lib/validations';
 
 interface Product {
   id: string;
@@ -150,6 +151,13 @@ const AdminProducts = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form data
+    const validation = validateForm(productSchema, formData);
+    if (validation.success === false) {
+      toast.error(getFirstError(validation.errors));
+      return;
+    }
 
     try {
       // Upload image if there's a new one
