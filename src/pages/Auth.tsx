@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import logo from '@/assets/casbah-logo.svg';
 import PINLogin from '@/components/PINLogin';
+import { signInSchema, signUpSchema, validateForm, getFirstError } from '@/lib/validations';
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loginMode, setLoginMode] = useState<'pin' | 'email'>('pin');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
 
   // Check if user is already logged in
@@ -65,12 +67,22 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validate input
+    const validation = validateForm(signInSchema, { email, password });
+    if (validation.success === false) {
+      setErrors(validation.errors);
+      toast.error(getFirstError(validation.errors));
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+        email: validation.data.email,
+        password: validation.data.password
       });
 
       if (error) throw error;
@@ -88,17 +100,27 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validate input
+    const validation = validateForm(signUpSchema, { fullName, email, password });
+    if (validation.success === false) {
+      setErrors(validation.errors);
+      toast.error(getFirstError(validation.errors));
+      return;
+    }
+
     setLoading(true);
 
     try {
       // Note: Role is NOT sent to signup - server always assigns 'cashier'
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: validation.data.email,
+        password: validation.data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            full_name: fullName
+            full_name: validation.data.fullName
             // Role removed - server hardcodes 'cashier' for security
           }
         }
@@ -155,9 +177,11 @@ const Auth = () => {
                     type="email"
                     placeholder="your@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); setErrors({}); }}
+                    className={errors.email ? 'border-destructive' : ''}
                     required
                   />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
@@ -165,9 +189,11 @@ const Auth = () => {
                     id="password"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value); setErrors({}); }}
+                    className={errors.password ? 'border-destructive' : ''}
                     required
                   />
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Signing in...' : 'Sign In'}
@@ -184,9 +210,11 @@ const Auth = () => {
                     type="text"
                     placeholder="John Doe"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => { setFullName(e.target.value); setErrors({}); }}
+                    className={errors.fullName ? 'border-destructive' : ''}
                     required
                   />
+                  {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
@@ -195,9 +223,11 @@ const Auth = () => {
                     type="email"
                     placeholder="your@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); setErrors({}); }}
+                    className={errors.email ? 'border-destructive' : ''}
                     required
                   />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
@@ -205,10 +235,12 @@ const Auth = () => {
                     id="signup-password"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value); setErrors({}); }}
+                    className={errors.password ? 'border-destructive' : ''}
                     required
                     minLength={6}
                   />
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   New accounts are assigned as Cashier. Contact admin for role changes.
