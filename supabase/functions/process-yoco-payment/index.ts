@@ -1,30 +1,127 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Strict CORS configuration
+const getAllowedOrigins = (): string[] => {
+  const origins = Deno.env.get('ALLOWED_ORIGINS');
+  if (origins) {
+    return origins.split(',').map(o => o.trim());
+  }
+  return [
+    'https://lovable.dev',
+    'https://*.lovable.dev',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
 };
 
+const getCorsHeaders = (origin: string | null): Record<string, string> => {
+  const allowedOrigins = getAllowedOrigins();
+  const isAllowed = origin && allowedOrigins.some(allowed => {
+    if (allowed.includes('*')) {
+      const pattern = new RegExp('^' + allowed.replace('*', '.*') + '$');
+      return pattern.test(origin);
+    }
+    return allowed === origin;
+  });
+  
+  return {
+    'Access-Control-Allow-Origin': isAllowed && origin ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+  };
+};
+
+// Input validation
+function validatePaymentInput(data: unknown): { valid: boolean; error?: string; sanitized?: { amount: number; currency: string; metadata?: Record<string, unknown>; sale_id?: string } } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+
+  const { amount, currency, metadata, sale_id } = data as Record<string, unknown>;
+
+  // Validate amount
+  if (typeof amount !== 'number' || !Number.isFinite(amount)) {
+    return { valid: false, error: 'Amount must be a valid number' };
+  }
+  
+  if (amount <= 0) {
+    return { valid: false, error: 'Amount must be positive' };
+  }
+  
+  if (amount > 1000000) { // Max 1 million ZAR
+    return { valid: false, error: 'Amount exceeds maximum limit' };
+  }
+
+  // Validate currency
+  const validCurrency = typeof currency === 'string' ? currency.toUpperCase() : 'ZAR';
+  if (!['ZAR', 'USD', 'EUR', 'GBP'].includes(validCurrency)) {
+    return { valid: false, error: 'Invalid currency' };
+  }
+
+  // Validate sale_id if provided (UUID format)
+  if (sale_id !== undefined && sale_id !== null) {
+    if (typeof sale_id !== 'string') {
+      return { valid: false, error: 'Invalid sale_id format' };
+    }
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(sale_id)) {
+      return { valid: false, error: 'Invalid sale_id format' };
+    }
+  }
+
+  return {
+    valid: true,
+    sanitized: {
+      amount: Math.round(amount * 100) / 100, // Round to 2 decimal places
+      currency: validCurrency,
+      metadata: metadata && typeof metadata === 'object' ? metadata as Record<string, unknown> : undefined,
+      sale_id: sale_id as string | undefined,
+    }
+  };
+}
+
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Only allow POST method
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Method not allowed' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 405 }
+    );
   }
 
   try {
     // Authenticate the request
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('Missing authorization header');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ success: false, error: 'Unauthorized' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      console.error('Missing Supabase configuration');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Server configuration error' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
     
     // Create client with user's token to verify authentication
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
@@ -34,7 +131,6 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
     if (authError || !user) {
-      console.error('Authentication failed:', authError?.message);
       return new Response(
         JSON.stringify({ success: false, error: 'Unauthorized' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
@@ -56,22 +152,39 @@ serve(async (req) => {
     });
 
     if (!roleCheck && !adminCheck) {
-      console.error('User lacks required role:', user.id);
       return new Response(
         JSON.stringify({ success: false, error: 'Insufficient permissions' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
       );
     }
 
-    const { amount, currency = 'ZAR', metadata, sale_id } = await req.json();
+    // Parse and validate request body
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid request body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const validation = validatePaymentInput(body);
+    if (!validation.valid || !validation.sanitized) {
+      return new Response(
+        JSON.stringify({ success: false, error: validation.error }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const { amount, currency, metadata, sale_id } = validation.sanitized;
 
     // Get Yoco key from environment variable (secure)
     const YOCO_SECRET_KEY = Deno.env.get('YOCO_SECRET_KEY');
     
     if (!YOCO_SECRET_KEY) {
-      console.error('YOCO_SECRET_KEY not configured');
       return new Response(
-        JSON.stringify({ success: false, error: 'Payment system not configured. Please add YOCO_SECRET_KEY.' }),
+        JSON.stringify({ success: false, error: 'Payment system not configured' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
@@ -97,7 +210,11 @@ serve(async (req) => {
     const yocoData = await yocoResponse.json();
 
     if (!yocoResponse.ok) {
-      throw new Error(yocoData.message || 'Yoco payment failed');
+      // Don't expose raw Yoco errors to client
+      return new Response(
+        JSON.stringify({ success: false, error: 'Payment processing failed' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     // Save transaction to database
@@ -111,44 +228,34 @@ serve(async (req) => {
         payment_method: 'card',
         status: yocoData.status || 'successful',
         provider_transaction_id: yocoData.id,
-        metadata: { ...yocoData, processed_by: user.id },
+        metadata: { transaction_id: yocoData.id, processed_by: user.id },
         processed_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (dbError) {
-      console.error('Database error:', dbError);
-      throw new Error('Failed to save transaction');
+      console.error('Database error saving transaction');
+      // Payment succeeded but DB save failed - log but don't fail the request
     }
-
-    console.log(`Payment processed by user ${user.id} for amount ${amount}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        transaction,
-        yoco_response: yocoData,
+        transaction_id: transaction?.id,
+        status: yocoData.status,
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {
-    console.error('Payment processing error:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Payment processing error:', error instanceof Error ? error.message : 'Unknown error');
     
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage,
+        error: 'Payment processing failed',
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });
