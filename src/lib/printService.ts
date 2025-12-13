@@ -483,7 +483,7 @@ export const printToBrowser = (
 
 /**
  * Send print job to network printer via HTTP (for printers with web interface)
- * Falls back to raw TCP attempt if HTTP fails
+ * Uses fast timeout to avoid blocking - fire and forget approach
  */
 export const sendToNetworkPrinter = async (
   printerIp: string,
@@ -492,43 +492,44 @@ export const sendToNetworkPrinter = async (
 ): Promise<boolean> => {
   console.log(`[Print] Sending to ${printerName} at ${printerIp}...`);
   
-  // Try HTTP POST (many thermal printers support this)
-  try {
-    // Common endpoints for thermal printers
-    const endpoints = [
-      `http://${printerIp}/cgi-bin/epos/service.cgi`,  // Epson
-      `http://${printerIp}/StarWebPRNT/SendMessage`,   // Star
-      `http://${printerIp}:9100`,                       // Raw TCP via HTTP proxy
-      `http://${printerIp}/print`,                      // Generic
-    ];
+  // Common endpoints for thermal printers - try all in parallel for speed
+  const endpoints = [
+    `http://${printerIp}/cgi-bin/epos/service.cgi`,  // Epson
+    `http://${printerIp}/StarWebPRNT/SendMessage`,   // Star
+    `http://${printerIp}:9100`,                       // Raw TCP via HTTP proxy
+    `http://${printerIp}/print`,                      // Generic
+  ];
 
-    for (const endpoint of endpoints) {
-      try {
-        // Add 3 second timeout to prevent hanging
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/html' },
-          body: content,
-          mode: 'no-cors', // Required for cross-origin printer requests
-          signal: controller.signal,
-        });
-        
-        clearTimeout(timeoutId);
-        console.log(`[Print] Sent to ${printerName} via ${endpoint}`);
-        return true;
-      } catch (e) {
-        // Try next endpoint
-      }
-    }
+  // Try all endpoints in parallel with 1.5s timeout (fast fail)
+  try {
+    const endpointPromises = endpoints.map(async endpoint => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/html' },
+        body: content,
+        mode: 'no-cors',
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      console.log(`[Print] Sent to ${printerName} via ${endpoint}`);
+      return true;
+    });
+
+    // Race all endpoints - first success wins, with 2s overall timeout
+    const result = await Promise.race([
+      ...endpointPromises,
+      new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+    ]);
+    
+    return result;
   } catch (error) {
-    console.warn(`[Print] Network print failed for ${printerName}:`, error);
+    console.log(`[Print] ${printerName} unreachable, will use fallback`);
+    return false;
   }
-  
-  console.log(`[Print] ${printerName} unreachable, will use fallback`);
-  return false;
 };
 
 export interface PrintResult {
@@ -621,26 +622,29 @@ export const printOrderViaEdgeFunction = async (
 
 /**
  * Browser fallback printing when network printers are unavailable
+ * Uses cached settings for speed
  */
 const printOrderFallback = async (order: PrintOrderData): Promise<void> => {
+  // Use cached settings if available, fetch only if needed
   const { printers, routes, branding } = await fetchPrintSettings();
   const kitchenItems = filterKitchenItems(order.items, routes, printers);
   
-  // Print kitchen ticket first
-  if (kitchenItems.length > 0) {
-    const kitchenContent = generateKitchenTicket(order, kitchenItems);
-    await printToBrowser(kitchenContent, 1, DEFAULT_PAPER_SIZE, 'KITCHEN ORDER');
-    await new Promise(resolve => setTimeout(resolve, 300));
-  }
-  
-  // Print receipt
+  // Print both in quick succession (no waiting for dialog)
+  const kitchenContent = kitchenItems.length > 0 ? generateKitchenTicket(order, kitchenItems) : null;
   const receiptContent = generateReceipt(order, branding);
-  await printToBrowser(receiptContent, 1, DEFAULT_PAPER_SIZE, 'RECEIPT');
+  
+  if (kitchenContent) {
+    printToBrowser(kitchenContent, 1, DEFAULT_PAPER_SIZE, 'KITCHEN ORDER');
+  }
+  // Small delay then receipt
+  setTimeout(() => {
+    printToBrowser(receiptContent, 1, DEFAULT_PAPER_SIZE, 'RECEIPT');
+  }, 100);
 };
 
 /**
- * Main print function - handles automatic sequential printing
- * Prints kitchen first (order 1), then receipt (order 180) based on configured settings
+ * Main print function - FAST fire-and-forget printing
+ * Prints to network printers in parallel, immediate browser fallback
  * Paper size: 80mm (72.1mm printable) x 210mm default
  */
 export const printOrder = async (
@@ -659,7 +663,7 @@ export const printOrder = async (
     paperSize = DEFAULT_PAPER_SIZE
   } = options;
 
-  // Fetch configured settings
+  // Use cached settings (should already be warm from app init)
   const { printers, routes, branding } = await fetchPrintSettings();
 
   // Get kitchen items based on routing rules
@@ -670,72 +674,68 @@ export const printOrder = async (
   const kitchenPrinter = printers.find(p => p.printer_type === 'kitchen');
   const receiptPrinter = printers.find(p => p.printer_type === 'receipt');
 
-  console.log('[Print] Starting dual print sequence:', {
-    kitchenItems: kitchenItems.length,
-    kitchenPrinter: kitchenPrinter?.name || 'None',
-    receiptPrinter: receiptPrinter?.name || 'None (using 180 default)',
-  });
+  console.log('[Print] Fast print starting');
 
-  let kitchenPrinted = false;
-  let receiptPrinted = false;
-
-  // Prepare print content
+  // Prepare print content upfront
   const kitchenContent = hasKitchenItems && printKitchenTicket ? generateKitchenTicket(order, kitchenItems) : null;
   const receiptContent = printReceipt ? generateReceipt(order, branding) : null;
 
-  // Send to both printers simultaneously using Promise.all
-  const printPromises: Promise<boolean>[] = [];
-
-  if (kitchenContent && kitchenPrinter?.ip_address) {
-    printPromises.push(
-      sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen')
-        .then(success => { kitchenPrinted = success; return success; })
-    );
+  // If no network printers configured, go straight to browser print
+  const hasNetworkPrinters = (kitchenPrinter?.ip_address || receiptPrinter?.ip_address);
+  
+  if (!hasNetworkPrinters) {
+    // Fire and forget browser prints
+    if (kitchenContent) {
+      printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
+    }
+    if (receiptContent) {
+      setTimeout(() => printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT'), 100);
+    }
+    return {
+      success: true,
+      message: 'Printed via browser',
+      kitchenPrinted: !!kitchenContent,
+      receiptPrinted: !!receiptContent,
+    };
   }
 
-  if (receiptContent && receiptPrinter?.ip_address) {
-    printPromises.push(
-      sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt')
-        .then(success => { receiptPrinted = success; return success; })
-    );
-  }
+  // Fire off network print attempts in parallel (don't await individually)
+  let kitchenPrinted = false;
+  let receiptPrinted = false;
 
-  // Wait for simultaneous print attempts
-  if (printPromises.length > 0) {
-    await Promise.all(printPromises);
-  }
+  const networkPrints = Promise.all([
+    kitchenContent && kitchenPrinter?.ip_address
+      ? sendToNetworkPrinter(kitchenPrinter.ip_address, kitchenContent, 'Kitchen')
+          .then(success => { kitchenPrinted = success; return success; })
+      : Promise.resolve(true),
+    receiptContent && receiptPrinter?.ip_address
+      ? sendToNetworkPrinter(receiptPrinter.ip_address, receiptContent, 'Receipt')
+          .then(success => { receiptPrinted = success; return success; })
+      : Promise.resolve(true),
+  ]);
 
-  // Fallback to browser print for failed network prints
+  // Wait max 2.5s for network prints, then fallback
+  await Promise.race([
+    networkPrints,
+    new Promise(resolve => setTimeout(resolve, 2500))
+  ]);
+
+  // Quick browser fallback for failed prints (fire and forget)
   if (kitchenContent && !kitchenPrinted) {
-    console.log('[Print] Kitchen network print failed, falling back to browser...');
-    await printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
+    printToBrowser(kitchenContent, 1, paperSize, 'KITCHEN ORDER');
     kitchenPrinted = true;
-    await new Promise(resolve => setTimeout(resolve, 300));
   }
 
   if (receiptContent && !receiptPrinted) {
-    console.log('[Print] Receipt network print failed, falling back to browser...');
-    await printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT');
+    setTimeout(() => printToBrowser(receiptContent, receiptCopies, paperSize, 'RECEIPT'), 50);
     receiptPrinted = true;
   }
 
-  // Build result message
-  let message = '';
-  if (kitchenPrinted && receiptPrinted) {
-    message = 'Receipt sent to Cashier and Kitchen Printers';
-  } else if (kitchenPrinted) {
-    message = 'Kitchen ticket printed (receipt printer unavailable)';
-  } else if (receiptPrinted) {
-    message = 'Receipt printed (kitchen printer unavailable)';
-  } else {
-    message = 'Printed via browser dialog';
-  }
-
-  console.log('[Print] Print sequence complete:', message);
+  console.log('[Print] Complete');
 
   return {
     success: true,
-    message,
+    message: 'Print job sent',
     kitchenPrinted,
     receiptPrinted,
   };
