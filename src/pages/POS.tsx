@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Keyboard, Eye, ParkingSquare } from 'lucide-react';
+import { Search, Wifi, WifiOff, LogOut, Trash2, Plus, Minus, Keyboard, Eye, ParkingSquare, CreditCard } from 'lucide-react';
 import { getCategoryIcon, getCategoryIconColor } from '@/lib/categoryIcons';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
@@ -26,6 +26,7 @@ import logo from '@/assets/casbah-logo.svg';
 import { printOrder, PrintOrderData, PrintItem } from '@/lib/printService';
 import { autoPrintOrder, isQZConnected, OrderData, initQZTray } from '@/lib/qzTray';
 import ParkedOrdersDialog, { getParkedOrdersCount } from '@/components/ParkedOrdersDialog';
+import BarTabDialog from '@/components/BarTabDialog';
 
 interface CartItem {
   product: LocalProduct;
@@ -157,6 +158,7 @@ const POS = () => {
   const [dbError, setDbError] = useState<string | null>(null);
   const [parkedOrdersOpen, setParkedOrdersOpen] = useState(false);
   const [parkedOrdersCount, setParkedOrdersCount] = useState(0);
+  const [barTabOpen, setBarTabOpen] = useState(false);
 
   // Database recovery function
   const resetDatabase = async () => {
@@ -861,6 +863,16 @@ const POS = () => {
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs gap-1"
+                  onClick={() => setBarTabOpen(true)}
+                  disabled={isLocked}
+                >
+                  <CreditCard className="h-3 w-3" />
+                  Tabs
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
                   onClick={() => setParkedOrdersOpen(true)}
                   disabled={isLocked}
                 >
@@ -1072,6 +1084,15 @@ const POS = () => {
           setParkedOrdersCount(getParkedOrdersCount());
         }}
         getItemPrice={getItemPrice}
+      />
+
+      {/* Bar Tab Dialog */}
+      <BarTabDialog
+        open={barTabOpen}
+        onClose={() => setBarTabOpen(false)}
+        cart={cart}
+        userId={user!.id}
+        onClearCart={() => setCart([])}
       />
     </div>
   );
