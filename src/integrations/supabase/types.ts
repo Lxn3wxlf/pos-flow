@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      bar_tab_items: {
+        Row: {
+          added_at: string
+          added_by: string
+          id: string
+          line_total: number
+          notes: string | null
+          product_id: string
+          product_name: string
+          qty: number
+          tab_id: string
+          unit_price: number
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          id?: string
+          line_total: number
+          notes?: string | null
+          product_id: string
+          product_name: string
+          qty?: number
+          tab_id: string
+          unit_price: number
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          id?: string
+          line_total?: number
+          notes?: string | null
+          product_id?: string
+          product_name?: string
+          qty?: number
+          tab_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bar_tab_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bar_tab_items_tab_id_fkey"
+            columns: ["tab_id"]
+            isOneToOne: false
+            referencedRelation: "bar_tabs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bar_tabs: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          current_total: number
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          spending_limit: number
+          status: string
+          table_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          current_total?: number
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          spending_limit: number
+          status?: string
+          table_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          current_total?: number
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          spending_limit?: number
+          status?: string
+          table_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bar_tabs_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
