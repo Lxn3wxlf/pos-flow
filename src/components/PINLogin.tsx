@@ -71,7 +71,7 @@ const PINLogin = ({ onSuccess, onSwitchToEmail }: PINLoginProps) => {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <img src={logo} alt="Casbah Logo" className="h-16 w-auto" />
+            <img src={logo} alt="Mr Tech Solutions Logo" className="h-16 w-auto" />
           </div>
           <CardTitle className="text-xl font-bold">Staff Login</CardTitle>
           <p className="text-sm text-muted-foreground">Enter your PIN to clock in</p>
@@ -170,7 +170,7 @@ const PINLogin = ({ onSuccess, onSwitchToEmail }: PINLoginProps) => {
 // This is only used when setting PINs, not for verification
 export async function hashPIN(pin: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(pin + 'casbah-salt-2024');
+  const data = encoder.encode(pin + 'mrtech-salt-2024');
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');

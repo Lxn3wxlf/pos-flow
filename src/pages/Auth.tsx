@@ -154,9 +154,9 @@ const Auth = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <img src={logo} alt="Casbah Logo" className="h-16 w-auto" />
+            <img src={logo} alt="Mr Tech Solutions Logo" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-2xl font-bold">Casbah POS</CardTitle>
+          <CardTitle className="text-2xl font-bold">Mr Tech Solutions POS</CardTitle>
           <CardDescription>
             Sign in to your account or create a new one
           </CardDescription>

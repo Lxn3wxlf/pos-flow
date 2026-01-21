@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png"],
       manifest: {
-        name: "Casbah POS System",
-        short_name: "Casbah POS",
+        name: "Mr Tech Solutions POS",
+        short_name: "Mr Tech POS",
         description: "Professional point-of-sale system for restaurants",
         theme_color: "#ffffff",
         background_color: "#ffffff",

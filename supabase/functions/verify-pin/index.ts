@@ -77,7 +77,7 @@ function checkRateLimit(ip: string): { allowed: boolean; message?: string } {
 
 // Secure PIN hashing with environment-based salt
 async function hashPIN(pin: string): Promise<string> {
-  const salt = Deno.env.get('PIN_SALT') || 'casbah-salt-2024';
+  const salt = Deno.env.get('PIN_SALT') || 'mrtech-salt-2024';
   const encoder = new TextEncoder();
   const data = encoder.encode(pin + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
