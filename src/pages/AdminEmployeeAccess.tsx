@@ -261,7 +261,7 @@ const AdminEmployeeAccess = () => {
           </Button>
           <img 
             src={logo} 
-            alt="Casbah Logo" 
+            alt="Mr Tech Solutions Logo"
             className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity" 
             onClick={() => navigate('/admin')}
           />

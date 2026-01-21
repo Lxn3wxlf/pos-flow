@@ -33,7 +33,7 @@ const categoryIconMap: Record<string, LucideIcon> = {
   'burgers': Beef,
   'burgers & sandwiches': Beef,
   'sandwiches': Sandwich,
-  'casbah famous sandwiches': Sandwich,
+  'famous sandwiches': Sandwich,
   
   // Grills & Meats
   'grill': Flame,
@@ -170,7 +170,7 @@ const categoryColorMap: Record<string, string> = {
   'burgers': 'text-orange-500',
   'burgers & sandwiches': 'text-orange-500',
   'sandwiches': 'text-yellow-600',
-  'casbah famous sandwiches': 'text-yellow-600',
+  'famous sandwiches': 'text-yellow-600',
   'grill': 'text-red-500',
   'grill & platters': 'text-red-500',
   'classic meals': 'text-orange-400',

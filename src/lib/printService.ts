@@ -101,7 +101,7 @@ const DEFAULT_KITCHEN_CATEGORIES = [
   // Food categories
   'Appetizers',
   'Burgers & Sandwiches',
-  'Casbah Famous Sandwiches',
+  'Famous Sandwiches',
   'Classic Meals',
   'Combos',
   'Curry & Bunny',
@@ -296,11 +296,11 @@ export const generateReceipt = (
   const timestamp = order.timestamp.toLocaleString('en-ZA');
   const orderTypeDisplay = order.orderType.replace('_', ' ').toUpperCase();
 
-  const businessName = sanitizeString(branding?.business_name || 'CASBAH');
-  const addressLine1 = sanitizeString(branding?.address_line1 || '194 Marine Drive');
+  const businessName = sanitizeString(branding?.business_name || 'MR TECH SOLUTIONS');
+  const addressLine1 = sanitizeString(branding?.address_line1 || '');
   const addressLine2 = sanitizeString(branding?.address_line2 || '');
-  const phone = sanitizeString(branding?.phone || '065 683 5702');
-  const footerText = sanitizeString(branding?.footer_text || 'Thank you for visiting CASBAH!');
+  const phone = sanitizeString(branding?.phone || '');
+  const footerText = sanitizeString(branding?.footer_text || 'Thank you for your business!');
 
   // Use branding logo if set, otherwise use default logo
   const logoUrl = branding?.logo_url || DEFAULT_LOGO_URL;

@@ -187,12 +187,12 @@ export class BiometricAuth {
       const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
         challenge,
         rp: {
-          name: 'Casbah POS',
+          name: 'Mr Tech Solutions POS',
           id: window.location.hostname
         },
         user: {
           id: userId,
-          name: 'pos-user@casbah.local',
+          name: 'pos-user@mrtech.local',
           displayName: 'POS User'
         },
         pubKeyCredParams: [

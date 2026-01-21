@@ -22,7 +22,7 @@ const Admin = () => {
         <div className="flex items-center gap-3">
           <img 
             src={logo} 
-            alt="Casbah Logo" 
+            alt="Mr Tech Solutions Logo"
             className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity" 
             onClick={() => navigate('/admin')}
           />

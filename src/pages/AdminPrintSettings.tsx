@@ -438,7 +438,7 @@ const AdminPrintSettings = () => {
           </Button>
           <img 
             src={logo} 
-            alt="Casbah Logo" 
+            alt="Mr Tech Solutions Logo"
             className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity" 
             onClick={() => navigate('/admin')}
           />
@@ -623,7 +623,7 @@ const AdminPrintSettings = () => {
                       ) : (
                         <img 
                           src="/casbah-logo-print.jpg" 
-                          alt="Default Casbah Logo" 
+                          alt="Default Logo" 
                           className="h-20 w-auto object-contain"
                         />
                       )}

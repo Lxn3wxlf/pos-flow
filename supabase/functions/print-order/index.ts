@@ -64,10 +64,10 @@ function generateCustomerReceipt(order: OrderData, branding: any): string {
   receipt += ESCPOS.ALIGN_CENTER;
   receipt += ESCPOS.BOLD_ON;
   receipt += ESCPOS.DOUBLE_SIZE;
-  receipt += (branding?.business_name || 'CASBAH') + ESCPOS.LINE_FEED;
+  receipt += (branding?.business_name || 'MR TECH SOLUTIONS') + ESCPOS.LINE_FEED;
   receipt += ESCPOS.NORMAL_SIZE;
   receipt += ESCPOS.BOLD_OFF;
-  receipt += 'GRILL & COFFEE' + ESCPOS.LINE_FEED;
+  receipt += 'POS SYSTEM' + ESCPOS.LINE_FEED;
   receipt += ESCPOS.LINE_FEED;
   
   // Address
@@ -142,7 +142,7 @@ function generateCustomerReceipt(order: OrderData, branding: any): string {
   receipt += ESCPOS.LINE_FEED;
   receipt += ESCPOS.ALIGN_CENTER;
   receipt += ESCPOS.BOLD_ON;
-  receipt += (branding?.footer_text || 'Thank you for visiting CASBAH!') + ESCPOS.LINE_FEED;
+  receipt += (branding?.footer_text || 'Thank you for your business!') + ESCPOS.LINE_FEED;
   receipt += ESCPOS.BOLD_OFF;
   receipt += 'VAT included where applicable' + ESCPOS.LINE_FEED;
   receipt += ESCPOS.LINE_FEED;

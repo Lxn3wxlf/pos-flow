@@ -22,7 +22,7 @@ interface ParkedOrdersDialogProps {
   getItemPrice: (item: any) => number;
 }
 
-const STORAGE_KEY = 'casbah_parked_orders';
+const STORAGE_KEY = 'mrtech_parked_orders';
 
 export function getParkedOrders(): Record<string, ParkedOrder> {
   try {

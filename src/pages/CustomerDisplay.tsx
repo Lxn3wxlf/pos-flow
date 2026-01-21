@@ -65,7 +65,7 @@ const CustomerDisplay = () => {
         <div className="text-center space-y-4">
           <img 
             src={logo} 
-            alt="Casbah Logo" 
+            alt="Mr Tech Solutions Logo"
             className="h-20 w-auto mx-auto"
           />
           <h1 className="text-5xl font-bold text-primary">Order Ready for Pickup</h1>
