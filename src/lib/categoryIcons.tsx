@@ -1,135 +1,104 @@
 import {
-  Beef,
-  Sandwich,
-  Salad,
-  Pizza,
-  Cookie,
-  Coffee,
-  Wine,
-  Beer,
-  GlassWater,
-  IceCream,
-  Drumstick,
-  Fish,
-  Egg,
-  Wheat,
-  Soup,
-  CakeSlice,
-  Flame,
-  UtensilsCrossed,
-  Baby,
-  Users,
+  Laptop,
+  Monitor,
+  Cpu,
+  HardDrive,
+  Mouse,
+  Wifi,
+  Headphones,
   Package,
-  Milk,
-  CupSoda,
-  Citrus,
-  LeafyGreen,
+  FileCode,
+  Wrench,
+  Keyboard,
+  Usb,
+  Cable,
+  ShoppingBag,
   type LucideIcon,
 } from 'lucide-react';
 
-// Map category names to appropriate icons
+// Map category names to appropriate icons for PC sales
 const categoryIconMap: Record<string, LucideIcon> = {
-  // Burgers & Sandwiches
-  'burgers': Beef,
-  'burgers & sandwiches': Beef,
-  'sandwiches': Sandwich,
-  'famous sandwiches': Sandwich,
+  // Laptops
+  'laptops': Laptop,
+  'laptop': Laptop,
+  'notebooks': Laptop,
   
-  // Grills & Meats
-  'grill': Flame,
-  'grill & platters': Flame,
-  'grills': Flame,
-  'platters': UtensilsCrossed,
-  'classic meals': Drumstick,
-  'mains': UtensilsCrossed,
-  'main course': UtensilsCrossed,
+  // Desktop PCs
+  'desktop pcs': Monitor,
+  'desktop': Monitor,
+  'desktops': Monitor,
+  'pcs': Monitor,
+  'computers': Monitor,
   
-  // Chicken
-  'chicken': Drumstick,
-  'wings': Drumstick,
+  // Monitors
+  'monitors': Monitor,
+  'monitor': Monitor,
+  'displays': Monitor,
+  'screens': Monitor,
   
-  // Seafood
-  'seafood': Fish,
-  'fish': Fish,
+  // Components
+  'components': Cpu,
+  'component': Cpu,
+  'cpu': Cpu,
+  'processors': Cpu,
+  'gpu': Cpu,
+  'graphics cards': Cpu,
+  'motherboards': Cpu,
+  'ram': Cpu,
+  'memory': Cpu,
+  'power supply': Cpu,
+  'psu': Cpu,
   
-  // Mexican
-  'mexican': Pizza,
+  // Storage
+  'storage': HardDrive,
+  'hard drives': HardDrive,
+  'hdd': HardDrive,
+  'ssd': HardDrive,
+  'drives': HardDrive,
+  'usb drives': Usb,
   
-  // Kids & Family
-  'kids': Baby,
-  'family meal': Users,
-  'family': Users,
+  // Peripherals
+  'peripherals': Mouse,
+  'peripheral': Mouse,
+  'mouse': Mouse,
+  'mice': Mouse,
+  'keyboards': Keyboard,
+  'keyboard': Keyboard,
+  'headsets': Headphones,
+  'headphones': Headphones,
+  'speakers': Headphones,
+  'webcams': Monitor,
   
-  // Combos
-  'combos': UtensilsCrossed,
-  'combo': UtensilsCrossed,
+  // Networking
+  'networking': Wifi,
+  'network': Wifi,
+  'routers': Wifi,
+  'switches': Wifi,
+  'wifi': Wifi,
+  'ethernet': Cable,
+  'cables': Cable,
   
-  // On The Go
-  'on the go meals': Package,
-  'on the go': Package,
-  'mr beasley': Package,
+  // Accessories
+  'accessories': ShoppingBag,
+  'accessory': ShoppingBag,
+  'bags': ShoppingBag,
+  'cases': ShoppingBag,
   
-  // Loaded Fries & Sides
-  'loaded fries': Salad,
-  'sides': Salad,
-  'sides & extras': Salad,
-  'fries': Salad,
+  // Software
+  'software': FileCode,
+  'programs': FileCode,
+  'licenses': FileCode,
+  'windows': FileCode,
+  'office': FileCode,
+  'antivirus': FileCode,
   
-  // Coffee & Hot Drinks
-  'coffee': Coffee,
-  'tea': Coffee,
-  'hot drinks': Coffee,
-  
-  // Cold Drinks
-  'cold coffee': IceCream,
-  'milk shake': Milk,
-  'milk shakes': Milk,
-  'milkshakes': Milk,
-  'freezos': IceCream,
-  'frozen': IceCream,
-  
-  // Other Drinks
-  'assorted drinks': CupSoda,
-  'beverages': GlassWater,
-  'drinks': GlassWater,
-  'cooldrinks': CupSoda,
-  'juices': Citrus,
-  
-  // Alcohol
-  'alcohol': Wine,
-  'bar': Beer,
-  'wine': Wine,
-  'beer': Beer,
-  'spirits': Wine,
-  
-  // Desserts
-  'desserts': CakeSlice,
-  'dessert': CakeSlice,
-  'sweets': Cookie,
-  
-  // Breakfast
-  'breakfast': Egg,
-  'eggs': Egg,
-  
-  // Curry
-  'curry': Soup,
-  'curry & bunny': Soup,
-  
-  // Salads
-  'salads': LeafyGreen,
-  'salad': LeafyGreen,
-  
-  // Bread
-  'bread': Wheat,
-  'roti': Wheat,
-  
-  // Starters
-  'starters': Soup,
-  'appetizers': Soup,
-  
-  // Specials
-  'midweek specials': Flame,
-  'specials': Flame,
+  // Services
+  'services': Wrench,
+  'service': Wrench,
+  'repairs': Wrench,
+  'repair': Wrench,
+  'installation': Wrench,
+  'support': Wrench,
 };
 
 // Get icon for a category name (case-insensitive)
@@ -155,36 +124,25 @@ export function getCategoryIcon(categoryName: string | null | undefined): Lucide
 
 // Icon colors by category type
 const categoryColorMap: Record<string, string> = {
-  'coffee': 'text-amber-600',
-  'tea': 'text-green-600',
-  'cold coffee': 'text-sky-500',
-  'milk shake': 'text-pink-400',
-  'freezos': 'text-cyan-400',
-  'assorted drinks': 'text-blue-500',
-  'beverages': 'text-blue-400',
-  'drinks': 'text-blue-400',
-  'alcohol': 'text-purple-500',
-  'bar': 'text-amber-500',
-  'wine': 'text-red-500',
-  'beer': 'text-amber-400',
-  'burgers': 'text-orange-500',
-  'burgers & sandwiches': 'text-orange-500',
-  'sandwiches': 'text-yellow-600',
-  'famous sandwiches': 'text-yellow-600',
-  'grill': 'text-red-500',
-  'grill & platters': 'text-red-500',
-  'classic meals': 'text-orange-400',
-  'chicken': 'text-amber-500',
-  'mexican': 'text-red-400',
-  'kids': 'text-pink-500',
-  'family meal': 'text-green-500',
-  'combos': 'text-indigo-500',
-  'loaded fries': 'text-yellow-500',
-  'sides': 'text-green-400',
-  'desserts': 'text-pink-400',
-  'dessert': 'text-pink-400',
-  'curry & bunny': 'text-orange-600',
-  'seafood': 'text-cyan-500',
+  'laptops': 'text-blue-500',
+  'laptop': 'text-blue-500',
+  'desktop pcs': 'text-slate-600',
+  'desktop': 'text-slate-600',
+  'desktops': 'text-slate-600',
+  'monitors': 'text-purple-500',
+  'monitor': 'text-purple-500',
+  'components': 'text-green-500',
+  'component': 'text-green-500',
+  'storage': 'text-orange-500',
+  'peripherals': 'text-pink-500',
+  'peripheral': 'text-pink-500',
+  'networking': 'text-cyan-500',
+  'network': 'text-cyan-500',
+  'accessories': 'text-amber-500',
+  'accessory': 'text-amber-500',
+  'software': 'text-indigo-500',
+  'services': 'text-emerald-500',
+  'service': 'text-emerald-500',
 };
 
 export function getCategoryIconColor(categoryName: string | null | undefined): string {
